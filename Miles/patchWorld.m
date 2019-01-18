@@ -1,5 +1,5 @@
 function patchWorld(t, evts, p, vs, in, out, audio)
-%% Very simple exp to test inferParams
+%% Very simple exp for patch
 % stimulusOn = evts.newTrial.delay(p.stimulusDelay);
 stimOn = evts.newTrial;
 stimOff = stimOn.delay(p.stimDelay);
@@ -9,16 +9,20 @@ stimOff = stimOn.delay(p.stimDelay);
 % vs.stim2 = stim2;
 
 % Stim
-stim = vis.circle(t, 50); % create a full field grating
-% stim = vis.bang(t);
+stim = vis.patch(t, 'rectangle'); % create a full field grating
 % stim.orientation = 0;
 % stim.azimuth = 0;
-% stim.sigma = [50 50];
+% stim.altitude = 0;
 % stim.dims = [50 50];
 stim.show = stimOn.to(stimOff);
 vs.stim = stim;
 
 
 evts.endTrial = stimOff.delay(5);
+
+try
+  p.stimDelay = 0.5;
+catch
+end
 
 end
