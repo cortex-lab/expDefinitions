@@ -1,6 +1,7 @@
-function harlowTask(t, evts, p, vs, in, out, audio)
-%% Harlow World
-% 
+function matchingPennies(t, evts, p, vs, in, out, audio)
+%% Matching Pennies
+% https://www.sciencedirect.com/science/article/pii/S0926641004001971#aep-section-id23
+% https://www.sciencedirect.com/science/article/pii/S0092867414011076?via%3Dihub#sec4
 
 %% parameters
 wheel = in.wheel.skipRepeats(); % skipRepeats means that this signal doesn't update if the new value is the same of the previous one (i.e. if the wheel doesn't move)
@@ -40,11 +41,15 @@ response = cond(...
 response = response.at(threshold); % only update the response signal when the threshold has been crossed
 stimulusOff = threshold.delay(1); % true a second after the threshold is crossed
 
+responseBuffer = response.scan(@horzcat, []); % Infinite buffer of values
+algorithm = 2; % algorithm to use: TODO make signal
+correctSide = responseBuffer.scan(@updateTrialData, randsample([-1 1],1), 'pars', algorithm, N);
+
 %% define correct response and feedback
 % each trial randomly pick -1 or 1 value for use in baited (guess) trials
 newStim = iff(~mod(evts.trialNum,6) | evts.trialNum==1, true, false);
 correctResponse = newStim.then(randsample([1 -1],1));
-feedback = correctResponse == response;
+feedback = correctSide == response;
 % Only update the feedback signal at the time of the threshold being crossed
 feedback = feedback.at(threshold).delay(0.1); 
 
@@ -63,45 +68,25 @@ azimuth = cond(...
 
 %% define the visual stimuli
 
-% Horizontal stimulus
-horz = vis.patch(t, 'rect'); % create a Gabor grating
-horz.orientation = 0;
-horz.dims = [1,10]; % in visual degrees
-vs.horizontal = horz; % store stimulus in visual stimuli set and log as 'leftStimulus'
+leftStimulus = vis.patch(t, 'circle');
+leftStimulus.dims = [10,10];
+leftStimulus.colour = [0 1 0];
+leftStimulus.azimuth = -p.azimuth;
+leftStimulus.show = true;
+vs.left = leftStimulus;
 
-% Vertical stimulus
-vert = vis.patch(t, 'rect'); % create a Gabor grating
-vert.orientation = 90;
-vert.dims = [1,10]; % in visual degrees
-vs.vertical = vert; % store stimulus in visual stimuli set and log as 'leftStimulus'
-
-% Square stimulus
-square = vis.patch(t, 'rect'); % create a Gabor grating
-square.dims = [10,10]; % in visual degrees
-square.azimuth = -p.stimulusAzimuth + azimuth;
-% When show is true, the stimulus is visible
-square.show = stimulusOn.to(stimulusOff);
-vs.square = square; % store stimulus in visual stimuli set and log as 'leftStimulus'
-
-% Circle stimulus
-circ = vis.patch(t, 'circle'); % create a Gabor grating
-circ.dims = [10,10]; % in visual degrees
-circ.azimuth = -p.stimulusAzimuth + azimuth;
-% When show is true, the stimulus is visible
-circ.show = stimulusOn.to(stimulusOff);
-vs.circ = circ; % store stimulus in visual stimuli set and log as 'circ'
+rightStimulus = vis.patch(t, 'circle');
+rightStimulus.dims = [10,10];
+rightStimulus.colour = [0 1 0];
+rightStimulus.azimuth = -p.azimuth;
+rightStimulus.show = true;
+vs.right = rightStimulus;
 
 % Plus stimulus
 cross = vis.patch(t, 'plus'); % create a Gabor grating
 cross.dims = [10,10]; % in visual degrees
-cross.orientation = 0; % in visual degrees
-vs.plus = cross; % store stimulus in visual stimuli set and log as 'cross'
-
-% Cross stimulus
-cross2 = vis.patch(t, 'cross'); % create a Gabor grating
-cross2.dims = [10,10]; % in visual degrees
-cross2.orientation = 45; % in visual degrees
-vs.cross = cross2; % store stimulus in visual stimuli set and log as 'cross2'
+cross.show = stimulusOn.to(stimulusOff);
+vs.plus = cross; % store stimulus in visual stimuli set and log as 'leftStimulus'
 
 %%
 % Cell array of visual stimuli
@@ -207,4 +192,62 @@ function duration = timeSampler(time)
       duration = randsample(time, 1);
   end
 end
+end
+
+function correctSide = updateTrialData(correctSide, responses, algorithm, N)
+    % https://www.sciencedirect.com/science/article/pii/S0926641004001971#aep-section-id23
+switch algorithm
+    case 0
+        % In algorithm 0, the computer selected one of the two targets randomly
+        % each with 50% probability. In matching pennies, this mixed strategy
+        % corresponds to the Nash equilibrium. If one of the players plays
+        % according to the equilibrium strategy in matching pennies, the expected
+        % payoffs to both players are fixed regardless of the other player's
+        % strategy. Therefore, this algorithm was employed to examine the initial
+        % strategy of the animal before more exploitative algorithms described
+        % below were introduced.
+        newSide = randsample([-1 1], 1);
+    case 1
+        % In algorithm 1, the computer stored the entire sequence of
+        % choices made by the animal in a given daily session. In each
+        % trial, the computer then used this information to calculate the
+        % conditional probabilities that the animal would choose each
+        % target given the animal's choices in the preceding N trials (N=0
+        % to 4). A null hypothesis that this probability is 0.5 was tested
+        % for each of these conditional probabilities (binomial test,
+        % p<0.05). If none of these hypotheses was rejected, it was assumed
+        % that the animal had selected both targets with equal
+        % probabilities independently from its previous choices, and the
+        % computer selected its targets randomly as in algorithm 0. If one
+        % or more hypotheses were rejected, then the computer biased its
+        % target selection using the conditional probability with the
+        % largest deviation from 0.5 that was statistically significant.
+        % This was achieved by selecting, with the probability of 1?p, the
+        % target that the animal had selected with the probability of p.
+        % For example, if the animal had selected the right-hand target
+        % with 80% probability, the computer would select the same target
+        % with 20% probability. In algorithm 1, therefore, the animal was
+        % required to select the two targets with equal probabilities and
+        % independently from its previous choices, in order to maximize its
+        % total reward.
+        recent_responses = responses(end-N:end);
+        prev_responses = [];
+        maxInd = length(responses) - len;
+        
+        for i=1:maxInd
+          if all(responses(i:i+N-1) == recent_responses)
+            prev_responses = [prev_responses responses(i+N)];
+          end
+        end
+        
+        %responses = randsample([-1 1],100,true);
+        choseLeft = sum(prev_responses) == -1;
+        pout_L = myBinomTest(choseLeft, numel(prev_responses), .5, 'one'); % Thanks to Matthew Nelson for function
+        % if isempty(prev_responses) || 
+%         pout_R = myBinomTest(N-choseLeft,N,.5,'one'); 
+        
+    case 2
+        rewarded = correctSide == responses;
+end
+correctSide = [correctSide newSide];
 end

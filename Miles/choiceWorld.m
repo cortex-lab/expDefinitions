@@ -64,7 +64,7 @@ wheelGain = iff(enoughTrials, normalGain, gain);
 prestimQuiescentPeriod = at(p.prestimQuiescentTime.map(@(A)rnd.exp(A(3),1,A(1:2))), events.newTrial); 
 preStimQuiescence = sig.quiescenceWatch(prestimQuiescentPeriod, t, wheel, quiescThreshold); 
 % Stimulus onset
-stimOn = at(true, preStimQuiescence); 
+stimOn = at(true, preStimQuiescence); % FIXME test whether at is needed here
 % Play tone at interactive onset
 audio.default = toneSamples.at(stimOn);
 % The wheel displacement is zeroed at stimOn
@@ -85,6 +85,7 @@ bias = merge(response.keepWhen(response~=3).bufferUpTo(10).map(@sum), ...
 %% Update performance at response
 responseData = vertcat(stimDisplacement, events.trialNum, response, bias);
 trialData = responseData.at(response).scan(@updateTrialData, trialDataInit).subscriptable;
+% trialData = response.scan(@updateTrialData, trialDataInit, 'pars', stimDisplacement, events.trialNum, bias).subscriptable;
 % Set trial contrast (chosen when updating performance)
 trialContrast = trialData.trialContrast.at(events.newTrial);
 hit = trialData.hit.at(response); 
@@ -580,6 +581,7 @@ if ~trialData.hit && any(trialData.repeatOnMiss==true) && ...
       sd = 0.5; % standard deviation
       r = 0.5 + sd.*randn; % pull number from normal dist with mean 0.5
       trialData.trialSide = iff((r - bias) > 0.5, 1, -1);
+      % trialData.trialSide = iff(binornd(1,bias), 
     end
     trialData.repeatTrial = true;
     return
