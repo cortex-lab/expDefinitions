@@ -18,7 +18,7 @@ t.Node.Listeners = [t.Node.Listeners, ...
   off.delay(p.offDuration.map(@timeSampler)).into(on),...
   into(map(evts.expStart, @ischar), on)];
 
-idx = merge(map(evts.expStart, @ischar), evts.newTrial.scan(@plus, 0).at(off));
+idx = merge(map(evts.expStart, true), evts.newTrial.scan(@plus, 0).at(off));
 number = imgIds(idx);%.map(@num2str);
 numberStr = number.map(@num2str);
 

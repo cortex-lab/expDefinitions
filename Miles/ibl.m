@@ -1,4 +1,4 @@
-function choiceWorld(t, events, p, visStim, inputs, outputs, audio)
+function ibl(t, events, p, visStim, inputs, outputs, audio)
 % ChoiceWorld(t, events, parameters, visStim, inputs, outputs, audio)
 %
 % A simple training protocol closely following that of our manual training.
@@ -26,6 +26,7 @@ rewardSize = p.rewardSize.at(events.expStart);
 initialGain = p.initialGain.at(events.expStart);
 normalGain = p.normalGain.at(events.expStart);
 blockLength = p.blockLength.at(events.expStart);
+proportionLeft = p.proportionLeft.at(events.expStart);
 responseWindow = p.responseWindow.at(events.expStart);
 
 % Sounds
@@ -44,13 +45,13 @@ missNoiseSamples = p.missNoiseAmplitude*events.expStart.map(@(x) ...
 trialDataInit = events.expStart.mapn( ...
     contrastSet, startingContrasts, repeatOnMiss, ...
     trialsToBuffer, trialsToZeroContrast, rewardSize,...
-    blockLength,...
+    blockLength, proportionLeft,...
     @initializeTrialData).subscriptable;
 
 %% Set up wheel 
-wheel = inputs.wheelDeg;
-quiescThreshold = 0.5;
-% millimetersFactor = events.newTrial.map2(31*2*pi/(p.encoderRes*4), @times); % convert the wheel gain to a value in mm/deg
+wheel = inputs.wheel.skipRepeats();
+quiescThreshold = p.encoderRes/10;
+millimetersFactor = events.newTrial.map2(31*2*pi/(p.encoderRes*4), @times); % convert the wheel gain to a value in mm/deg
 gain = events.expStart.mapn(initialGain, normalGain, @initWheelGain);
 enoughTrials = events.trialNum > 200;
 wheelGain = iff(enoughTrials, normalGain, gain);
@@ -67,7 +68,7 @@ stimOn = at(true, preStimQuiescence); % FIXME test whether at is needed here
 % Play tone at interactive onset
 audio.default = toneSamples.at(stimOn);
 % The wheel displacement is zeroed at stimOn
-stimDisplacement = wheelGain*(wheel - wheel.at(stimOn));
+stimDisplacement = wheelGain*millimetersFactor*(wheel - wheel.at(stimOn));
 
 responseTimeOver = (t - t.at(stimOn)) > responseWindow; % p.responseWindow may be set to Inf
 threshold = stimOn.setTrigger(...
@@ -173,7 +174,9 @@ stim.show = stimOn.to(stimOff);
 visStim.stim = stim;
 
 %% Display and save
+events.propL = trialData.proportionLeft == 0.5;
 % events.pPerf = (baselinePerf - windowedPerf)/baselinePerf > p.pctPerfDecrease/100;
+events.poorPerf = poorPerformance;
 % Wheel and stim
 events.azimuth = azimuth;
 
@@ -199,6 +202,8 @@ events.endAfter = trialDataInit.endAfter/60;
 
 % Trial side probability
 events.bias = bias;
+events.proportionLeft = trialData.proportionLeft(1);
+events.trialsToSwitch = trialData.trialsToSwitch;
 
 % Performance
 events.contrastSet = trialData.contrastSet;
@@ -236,6 +241,12 @@ p.rewardSize = 3; % (microliters)
 % Initial wheel gain
 p.initialGain = 8; % ~= 20 @ 90 deg;
 p.normalGain = 4; % ~= 10 @ 90 deg;
+% Resolution of the rotary encoder
+p.encoderRes = 1024; 
+
+% Trial side probability switching
+p.proportionLeft = [0.2, 0.8]';
+p.blockLength = [20, 100, 50]';
 
 % Timing
 p.prestimQuiescentTime = [0.2, 0.5, 0.35]'; % (seconds)
@@ -293,7 +304,7 @@ end
 
 function trialDataInit = initializeTrialData(expRef, ...
     contrastSet,startingContrasts,repeatOnMiss,trialsToBuffer, ...
-    trialsToZeroContrast,rewardSize)
+    trialsToZeroContrast,rewardSize,blockLength,proportionLeft)
 
 %%%% Get the subject
 % (from events.expStart - derive subject from expRef)
@@ -311,6 +322,10 @@ trialDataInit.repeatOnMiss = repeatOnMiss;
 trialDataInit.repeatTrial = false;
 % Initialize hit/miss
 trialDataInit.hit = nan;
+% Initialize trial side proportions
+trialDataInit.proportionLeft = 0.5;
+% Store block length for sampling later
+trialDataInit.blockLength = Inf;
 
 %%%% Load the last experiment for the subject if it exists
 % (note: MC creates folder on initilization, so start search at 1-back)
@@ -391,8 +406,12 @@ if useOldParams
         trialDataInit.rewardSize = lastRewardSize;
     end
     if learned
+      % Initialize trial side proportions
+      trialDataInit.proportionLeft = proportionLeft;
       % Remove repeat on incorrect
       trialDataInit.repeatOnMiss = zeros(1,length(trialDataInit.contrastSet));
+      % Store block length for sampling later
+      trialDataInit.blockLength = blockLength;
     end
     
 else
@@ -406,11 +425,22 @@ else
     trialDataInit.rewardSize = rewardSize;
 end
 
+% Initialize trial countdown for trial side switch
+if length(trialDataInit.blockLength) == 3
+  bounds = trialDataInit.blockLength(1:2);
+  E = trialDataInit.blockLength(3);
+  trialDataInit.trialsToSwitch = round(rnd.exp(E,1,bounds));
+else
+  trialDataInit.trialsToSwitch = round(rnd.sample(trialDataInit.blockLength));
+end
 % Set the first contrast
 contrasts = trialDataInit.contrastSet(trialDataInit.useContrasts);
 w = ((contrasts~=0) + 1) / length(unique([contrasts, -contrasts]));
 trialDataInit.trialContrast = randsample(contrasts, 1, true, w);
-trialDataInit.trialSide = iff(rand <= 0.5, -1, 1);
+% Initialize which side takes the probability
+trialDataInit.proportionLeft = trialDataInit.proportionLeft(randperm(length(trialDataInit.proportionLeft)));
+
+trialDataInit.trialSide = iff(rand(1) <= trialDataInit.proportionLeft(1), -1, 1);
 end
 
 function trialData = updateTrialData(trialData,responseData)
@@ -566,7 +596,22 @@ contrasts = trialData.contrastSet(trialData.useContrasts);
 w = ((contrasts~=0) + 1) / length(unique([contrasts, -contrasts]));
 trialData.trialContrast = randsample(contrasts, 1, true, w);
 %%%% Pick next side
-trialData.trialSide = iff(rand <= 0.5, -1, 1);
+trialData.trialsToSwitch = trialData.trialsToSwitch - 1;
+if trialData.trialsToSwitch == 0
+  if length(trialData.proportionLeft) > 1
+    pLeft = randsample(trialData.proportionLeft(2:end),1);
+    trialData.proportionLeft = [pLeft; trialData.proportionLeft(trialData.proportionLeft~=pLeft)];
+  end
+  if length(trialData.blockLength) == 3
+    bounds = trialData.blockLength(1:2);
+    E = trialData.blockLength(3);
+    trialData.trialsToSwitch = round(rnd.exp(E,1,bounds));
+  else
+    trialData.trialsToSwitch = round(rnd.sample(trialData.blockLength));
+  end
+end
+
+trialData.trialSide = iff(rand <= trialData.proportionLeft(1), -1, 1);
 end
 function learned = isLearned(ref)
 learned = false;
@@ -586,6 +631,13 @@ for i = length(expRef):-1:1
     continue
   end
   try
+    % If trial side prob uneven, the subject must have learned
+    probabilityLeft = readNPY(fullfile(p,'_ibl_trials.probabilityLeft.npy'));
+    if any(probabilityLeft~=0.5)
+      fprintf('Asymmetric trials already introduced\n')
+      learned = true;
+      return
+    end
     feedback = readNPY(fullfile(p,'_ibl_trials.feedbackType.npy'));
     contrastLeft = readNPY(fullfile(p,'_ibl_trials.contrastLeft.npy'));
     contrastRight = readNPY(fullfile(p,'_ibl_trials.contrastRight.npy'));

@@ -1,4 +1,4 @@
-classdef choiceWorldExpPanel < eui.ExpPanel
+classdef iblExpPanel < eui.ExpPanel
     %eui.SqueakExpPanel Basic UI control for monitoring an experiment
     %   TODO
     %
@@ -34,7 +34,7 @@ classdef choiceWorldExpPanel < eui.ExpPanel
     end
     
     methods
-        function obj = choiceWorldExpPanel(parent, ref, params, logEntry)
+        function obj = iblExpPanel(parent, ref, params, logEntry)
             obj = obj@eui.ExpPanel(parent, ref, params, logEntry);
             obj.LabelsMap = containers.Map();
             % Initialize InputSensor properties for speed
@@ -326,8 +326,7 @@ classdef choiceWorldExpPanel < eui.ExpPanel
                             
                         case {'events.trialNum', 'events.repeatNum', 'events.totalWater'...
                                 'events.disengaged', 'events.pctDecrease', 'events.proportionLeft',...
-                                'events.trialsToSwitch', 'inputs.lick', 'outputs.rewardValve',...
-                                'events.prestimQuiescentPeriod'}
+                                'events.trialsToSwitch', 'inputs.lick', 'events.prestimQuiescentPeriod'}
                             
                             if ~isKey(obj.LabelsMap, signame)
                                 obj.LabelsMap(signame) = obj.addInfoField(signame, '');

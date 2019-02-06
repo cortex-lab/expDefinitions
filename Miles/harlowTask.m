@@ -52,7 +52,7 @@ noiseBurstSamples = p.noiseBurstAmp*...
     mapn(audioDevice.NrOutputChannels, p.noiseBurstDur*audioDevice.DefaultSampleRate, @randn);
 audio.default = noiseBurstSamples.at(feedback==0); % When the subject gives an incorrect response, send samples to audio device and log as 'noiseBurst'
 
-reward = merge(rewardKeyPressed, feedback > 0);% only update when feedback changes to greater than 0, or reward key is pressed
+reward = feedback > 0;% only update when feedback changes to greater than 0, or reward key is pressed
 out.reward = p.rewardSize.at(reward); % output this signal to the reward controller
 
 %% stimulus azimuth
@@ -95,7 +95,7 @@ vs.circ = circ; % store stimulus in visual stimuli set and log as 'circ'
 cross = vis.patch(t, 'plus'); % create a Gabor grating
 cross.dims = [10,10]; % in visual degrees
 cross.orientation = 0; % in visual degrees
-vs.plus = cross; % store stimulus in visual stimuli set and log as 'cross'
+vs.pluss = cross; % store stimulus in visual stimuli set and log as 'cross'
 
 % Cross stimulus
 cross2 = vis.patch(t, 'cross'); % create a Gabor grating
@@ -105,18 +105,18 @@ vs.cross = cross2; % store stimulus in visual stimuli set and log as 'cross2'
 
 %%
 % Cell array of visual stimuli
-stimSet = struct2cell(vs); 
+stimSet = {horz, vert, square, circ, cross, cross2}; 
 % Determine number of stimuli availiable
 nStim = length(stimSet);
 % Randomly select two indicies, but only do so when the newStim signal
 % is true
-selector = map(@()randsample(1:nStim,2));
+selector = evts.newTrial.map(@(~)randsample(1:nStim,2));
 selector = selector.at(newStim);
 
 % Define when the stimuli should be visible, here we choose to show the
 % stimuli when ever their index is selected
 for i = 1:length(stimSet)
-    stimSet{i}.show = any(selector == i);
+    stimSet{i}.show = map(selector == i, @any);
     stimSet{i}.azimuth = cond(...
         selector(1) == i, -p.stimulusAzimuth + azimuth,...
         selector(2) == i, p.stimulusAzimuth + azimuth,...
@@ -133,9 +133,8 @@ nextCondition = feedback > 0 | p.repeatIncorrect == false;
 evts.stimulusOn = stimulusOn;
 evts.preStimulusDelay = preStimulusDelay;
 % save the contrasts as a difference between left and right
-evts.contrast = p.stimulusContrast.map(@diff); 
-evts.contrastLeft = contrastLeft;
-evts.contrastRight = contrastRight;
+evts.stimLeft = selector(1);
+evts.stimRight = selector(2);
 evts.azimuth = azimuth;
 evts.response = response;
 evts.feedback = feedback;

@@ -9,7 +9,7 @@ function advancedChoiceWorld(t, evts, p, vs, in, out, audio)
 % 2018-03-15 Added time sampler function for delays
 
 %% parameters
-wheel = in.wheel.skipRepeats(); % skipRepeats means that this signal doesn't update if the new value is the same of the previous one (i.e. if the wheel doesn't move)
+wheel = in.wheelMM; % The wheel input in mm turned tangential to the surface
 rewardKey = p.rewardKey.at(evts.expStart); % get value of rewardKey at experiemnt start, otherwise it will take the same value each new trial
 rewardKeyPressed = in.keyboard.strcmp(rewardKey); % true each time the reward key is pressed
 contrastLeft = p.stimulusContrast(1);
@@ -38,8 +38,7 @@ audio.default = onsetToneSamples.at(interactiveOn); % At the time of 'interative
 % e.g. a KÜBLER 2400 with 100 pulses per revolution will actually generate
 % *400* position ticks per full revolution.
 wheelOrigin = wheel.at(interactiveOn); % wheel position sampled at 'interactiveOn'
-millimetersFactor = map2(p.wheelGain, 31*2*pi/(p.encoderRes*4), @times); % convert the wheel gain to a value in mm/deg
-stimulusDisplacement = millimetersFactor*(wheel - wheelOrigin); % yoke the stimulus displacment to the wheel movement during closed loop
+stimulusDisplacement = wheel - wheelOrigin; % yoke the stimulus displacment to the wheel movement during closed loop
 
 %% define response and response threshold 
 responseTimeOver = (t - t.at(interactiveOn)) > p.responseWindow; % p.responseWindow may be set to Inf
@@ -139,16 +138,19 @@ evts.endTrial = nextCondition.at(stimulusOff).delay(p.interTrialDelay.map(@timeS
 % column is a condition.  All conditional paramters must have the same
 % number of columns.
 try
-c = [1 0.5 0.25 0.12 0.06 0];
 %%% Contrast starting set
 % C = [1 0;0 1;0.5 0;0 0.5]';
 %%% Contrast discrimination set
+% c = [1 0.5 0.25 0.12 0.06 0];
 % c = combvec(c, c);
 % C = unique([c, flipud(c)]', 'rows')';
 %%% Contrast detection set
+c = [1 0.5 0.25 0.12 0.06 0];
 C = [c, zeros(1, numel(c)-1); zeros(1, numel(c)-1), c];
+%%%
 p.stimulusContrast = C;
-p.repeatIncorrect = abs(diff(C,1)) > 0.25 | all(C==0);
+
+p.repeatIncorrect = abs(diff(C,1)) > 0.25; % | all(C==0);
 p.onsetToneFrequency = 5000;
 p.interactiveDelay = 0.4;
 p.onsetToneAmplitude = 0.15;
@@ -162,7 +164,6 @@ p.stimulusOrientation = [0, 0]';
 p.spatialFrequency = 0.19; % Prusky & Douglas, 2004
 p.interTrialDelay = 0.5;
 p.wheelGain = 5;
-p.encoderRes = 1024;
 p.preStimulusDelay = [0 0.1 0.09]';
 catch % ex
 %    disp(getReport(ex, 'extended', 'hyperlinks', 'on'))
