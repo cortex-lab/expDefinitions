@@ -25,7 +25,6 @@ trialsToZeroContrast = p.trialsToZeroContrast.at(events.expStart);
 rewardSize = p.rewardSize.at(events.expStart);
 initialGain = p.initialGain.at(events.expStart);
 normalGain = p.normalGain.at(events.expStart);
-blockLength = p.blockLength.at(events.expStart);
 responseWindow = p.responseWindow.at(events.expStart);
 
 % Sounds
@@ -41,14 +40,13 @@ missNoiseSamples = p.missNoiseAmplitude*events.expStart.map(@(x) ...
     randn(audioDevice.NrOutputChannels, audioDevice.DefaultSampleRate*missNoiseDuration));
 
 %% Initialize trial data
-trialDataInit = events.expStart.mapn( ...
+trialDataInit = events.expStart.mapn( p.randomiseConditions,...
     contrastSet, startingContrasts, repeatOnMiss, ...
     trialsToBuffer, trialsToZeroContrast, rewardSize,...
-    blockLength,...
     @initializeTrialData).subscriptable;
 
 %% Set up wheel 
-wheel = inputs.wheelDeg;
+wheel = inputs.wheelMM;
 quiescThreshold = 0.5;
 % millimetersFactor = events.newTrial.map2(31*2*pi/(p.encoderRes*4), @times); % convert the wheel gain to a value in mm/deg
 gain = events.expStart.mapn(initialGain, normalGain, @initWheelGain);

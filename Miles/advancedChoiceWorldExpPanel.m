@@ -108,7 +108,7 @@ classdef advancedChoiceWorldExpPanel < eui.ExpPanel
                 
                 % pull out wheel updates
                 allNames = {updates.name};
-                wheelUpdates = strcmp(allNames, 'inputs.wheel');
+                wheelUpdates = strcmp(allNames, 'inputs.wheelMM');
                 
                 if sum(wheelUpdates)>0
                     
@@ -226,8 +226,7 @@ classdef advancedChoiceWorldExpPanel < eui.ExpPanel
                             
                             respWin = p.responseWindow; if respWin>1000; respWin = 1000; end
                             
-                            mm = 31*2*pi/(p.encoderRes*4)*p.wheelGain;
-                            th = p.stimulusAzimuth/mm;
+                            th = p.stimulusAzimuth/p.wheelGain;
                             startPos = obj.InputSensorPos(find(obj.InputSensorPosTime<ioTime,1,'last'));
                             if isempty(startPos); startPos = obj.InputSensorPos(obj.InputSensorPosCount); end % for first trial
                             tL = startPos-th;
@@ -249,8 +248,7 @@ classdef advancedChoiceWorldExpPanel < eui.ExpPanel
                             p = obj.Block.trial(end).pars;
                             soTime = (24*3600*datenum(updates(ui).timestamp))-(24*3600*obj.StartedDateTime);              
                             
-                            mm = 31*2*pi/(p.encoderRes*4)*p.wheelGain;
-                            th = p.stimulusAzimuth/mm;
+                            th = p.stimulusAzimuth/p.wheelGain;
                             startPos = obj.InputSensorPos(find(obj.InputSensorPosTime<soTime,1,'last'));
                             if isempty(startPos); startPos = obj.InputSensorPos(obj.InputSensorPosCount); end % for first trial
                             tL = startPos-th;

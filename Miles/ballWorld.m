@@ -53,6 +53,7 @@ evts.endTrial = evts.newTrial.delay(10);
 % UDPs received from the MouseBall host during the experiment.
 evts.NS = NS;
 evts.EW = EW;
+p.ballHostname;
 
 %% parameters
 % In order for the UDP Websocket to be activated, a parameter called

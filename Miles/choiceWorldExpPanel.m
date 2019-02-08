@@ -138,7 +138,7 @@ classdef choiceWorldExpPanel < eui.ExpPanel
                 
                 % pull out wheel updates
                 allNames = {updates.name};
-                wheelUpdates = strcmp(allNames, 'inputs.wheel');
+                wheelUpdates = strcmp(allNames, 'inputs.wheelMM');
                 
                 if sum(wheelUpdates)>0
                     x = -[updates(wheelUpdates).value];
@@ -244,8 +244,7 @@ classdef choiceWorldExpPanel < eui.ExpPanel
                             respWin = Inf; if respWin>1000; respWin = 1000; end
                             
                             gain = iff(isempty(obj.Block.trial(end).wheelGain), p.normalGain, obj.Block.trial(end).wheelGain);
-                            mm = 31*2*pi/(p.encoderRes*4)*gain;
-                            th = p.responseDisplacement/mm;
+                            th = p.responseDisplacement/gain;
                             startPos = obj.InputSensorPos(find(obj.InputSensorPosTime<ioTime,1,'last'));
                             if isempty(startPos); startPos = obj.InputSensorPos(obj.InputSensorPosCount); end % for first trial
                             tL = startPos-th;
@@ -267,8 +266,7 @@ classdef choiceWorldExpPanel < eui.ExpPanel
                             p = obj.Parameters.Struct;                            
                             soTime = (24*3600*datenum(updates(ui).timestamp))-(24*3600*obj.StartedDateTime);              
                             gain = iff(isempty(obj.Block.trial(end).wheelGain), p.normalGain, obj.Block.trial(end).wheelGain);
-                            mm = 31*2*pi/(p.encoderRes*4)*gain;
-                            th = p.responseDisplacement/mm;
+                            th = p.responseDisplacement/gain;
                             startPos = obj.InputSensorPos(find(obj.InputSensorPosTime<soTime,1,'last'));
                             if isempty(startPos); startPos = obj.InputSensorPos(obj.InputSensorPosCount); end % for first trial
                             tL = startPos-th;
@@ -326,7 +324,7 @@ classdef choiceWorldExpPanel < eui.ExpPanel
                             
                         case {'events.trialNum', 'events.repeatNum', 'events.totalWater'...
                                 'events.disengaged', 'events.pctDecrease', 'events.proportionLeft',...
-                                'events.trialsToSwitch', 'inputs.lick', 'outputs.rewardValve',...
+                                'events.trialsToSwitch', 'inputs.lick', 'outputs.reward',...
                                 'events.prestimQuiescentPeriod'}
                             
                             if ~isKey(obj.LabelsMap, signame)
