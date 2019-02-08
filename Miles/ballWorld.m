@@ -60,6 +60,6 @@ p.ballHostname;
 % ballHostname must be present.  This parameter contains the hostname of
 % the remote computer running MouseBall.
 try
-  ballHostname = 'ZBALL';
+  p.ballHostname = 'ZBALL';
 catch
 end
