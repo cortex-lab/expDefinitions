@@ -69,24 +69,7 @@ classdef choiceWorldExpPanel < eui.ExpPanel
     function setContrast(obj, ~, ~)
       cL = obj.contrastLeft;
       cR = obj.contrastRight;
-      if ~isempty(cL)&&~isempty(cR)
-        if cL>0 && cL>cR
-          colorL = 'g'; colorR = 'r';
-        elseif cL>0 && cL==cR
-          colorL = 'g'; colorR = 'g';
-        elseif cR>0
-          colorL = 'r'; colorR = 'g';
-        elseif isnan(cL)||isnan(cR)
-          colorL = 'k'; colorR = 'k';
-        else
-          colorL = 'r'; colorR = 'r';
-        end
-        set(obj.ExperimentHands.threshL, 'Color', colorL);
-        set(obj.ExperimentHands.threshR, 'Color', colorR);
-        obj.Parameters.Struct.stimulusContrast = [cL cR];
-        % show the visual stimulus
-        %           caxis(obj.ScreenAxes, [0 255]);
-      end
+      obj.Parameters.Struct.stimulusContrast = [cL cR];
     end
     function newTrial(obj, num, condition)
     end
@@ -254,7 +237,7 @@ classdef choiceWorldExpPanel < eui.ExpPanel
               if isempty(startPos); startPos = obj.InputSensorPos(obj.InputSensorPosCount); end % for first trial
               tL = startPos-th;
               tR = startPos+th;
-              
+                             
               set(obj.ExperimentHands.threshL, ...
                 'XData', [tL tL], 'YData', ioTime+[0 respWin]);
               set(obj.ExperimentHands.threshR, ...
@@ -264,6 +247,23 @@ classdef choiceWorldExpPanel < eui.ExpPanel
               set(obj.ExperimentHands.threshLoff, 'XData', [tL tL], 'YData', [yd(1) ioTime]);
               set(obj.ExperimentHands.threshRoff, 'XData', [tR tR], 'YData', [yd(1) ioTime]);
               
+              cL = obj.contrastLeft;
+              cR = obj.contrastRight;
+              if ~isempty(cL)&&~isempty(cR)
+                if cL>0 && cL>cR
+                  colorL = 'g'; colorR = 'r';
+                elseif cL>0 && cL==cR
+                  colorL = 'g'; colorR = 'g';
+                elseif cR>0
+                  colorL = 'r'; colorR = 'g';
+                elseif isnan(cL)||isnan(cR)
+                  colorL = 'k'; colorR = 'k';
+                else
+                  colorL = 'r'; colorR = 'r';
+                end
+                set(obj.ExperimentHands.threshL, 'Color', colorL);
+                set(obj.ExperimentHands.threshR, 'Color', colorR);
+              end
               obj.ExperimentAxes.XLim = startPos+1.5*th*[-1 1];
               
             case 'events.stimulusOn'
@@ -294,6 +294,14 @@ classdef choiceWorldExpPanel < eui.ExpPanel
               
               set(obj.ScreenHands.Im, 'CData', 127*ones(size(get(obj.ScreenHands.Im, 'CData'))));
               caxis(obj.ScreenAxes, [0 255]);
+              
+              % re-set the response window starting now
+              ioTime = (24*3600*datenum(updates(ui).timestamp))-(24*3600*obj.StartedDateTime);
+              yd = get(obj.ExperimentHands.threshR, 'YData');
+              set(obj.ExperimentHands.threshL, ...
+                'YData', [yd(1) ioTime]);
+              set(obj.ExperimentHands.threshR, ...
+                'YData', [yd(1) ioTime]);
               
             case 'events.response'
               
@@ -326,10 +334,7 @@ classdef choiceWorldExpPanel < eui.ExpPanel
               
               az = updates(ui).value;
               set(obj.ScreenAxes, 'XLim', -az+[-135 135]); % trick to move visual stimuli by moving the xlim in the opposite way
-              
-%             case 'events.performance'
-%               disp(updates(ui).value)
-              
+                            
             case {'events.trialNum', 'events.repeatNum', 'events.totalWater'...
                 'events.disengaged', 'events.pctDecrease', 'events.proportionLeft',...
                 'events.trialsToSwitch', 'inputs.lick', 'outputs.reward',...
