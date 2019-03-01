@@ -1,4 +1,4 @@
-function habituationWorld(t, evts, p, vs, in, out, ~)
+function habituationWorld(t, evts, p, vs, in, out, audio)
 %% habituationWorld
 % A simple function that will either output a reward at the end of each
 % trial whose length is defined by p.rewardTime, or when the wheel reaches
@@ -13,6 +13,19 @@ wheelDelta = wheelDelta - wheelDelta.at(evts.newTrial); % Reset each trial
 
 rewardKey = p.rewardKey.at(evts.expStart); % get value of rewardKey at experiemnt start, otherwise it will take the same value each new trial
 rewardKeyPressed = in.keyboard.strcmp(rewardKey); % true each time the reward key is pressed
+
+% Sounds
+audioDevice = audio.Devices('default');
+onsetToneFreq = 5000;
+onsetToneDuration = 0.1;
+onsetToneRampDuration = 0.01;
+toneSamples = p.onsetToneAmplitude*events.expStart.map(@(x) ...
+    aud.pureTone(onsetToneFreq, onsetToneDuration, audioDevice.DefaultSampleRate, ...
+    onsetToneRampDuration, audioDevice.NrOutputChannels));
+
+%% Audio onset tone
+% Play tone at trial onset
+audio.default = toneSamples.at(evts.newTrial);
 
 %% feedback
 reward = iff(p.useWheel, wheelDelta > p.movementThreshold,... % movement threshold reached
@@ -49,6 +62,7 @@ evts.trialSide = trialSide;
 evts.totalWater = out.reward.scan(@plus, 0).map(fun.partial(@sprintf, '%.1fµl'));
 
 try
+  p.onsetToneAmplitude = 0.15;
   p.rewardKey = 'r';
   p.interTrialDelay = 1.0;
   p.rewardSize = 3;
