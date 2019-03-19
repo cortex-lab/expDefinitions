@@ -84,7 +84,7 @@ stim_azimuth = azimuth + p.stimulusAzimuth*iff(stimSide, -1, 1);
 
 %% Define stimulus
 
-stimFlicker = mod(t * p.stimFlickerFrequency, 2) > 1;
+stimFlicker = mod(t * p.stimFlickerFrequency, 1) > 0.5;
 
 stimulus = vis.patch(t, 'rect');
 stimulus.azimuth = stim_azimuth;
@@ -157,11 +157,11 @@ evts.p_left = p_left;
 evts.p_white = p_white;
 % Accumulate reward signals and append microlitre units
 evts.totalRewardVolume = out.reward.scan(@plus, 0).map(fun.partial(@sprintf, '%.1fµl'));
-evts.p_correct_left = p_correct_left;
-evts.p_correct_right = p_correct_right;
-evts.p_correct_black = p_correct_black;
-evts.p_correct_white = p_correct_white;
-evts.p_correct_all = p_correct_all;
+%evts.p_correct_left = p_correct_left;
+%evts.p_correct_right = p_correct_right;
+%evts.p_correct_black = p_correct_black;
+%evts.p_correct_white = p_correct_white;
+%evts.p_correct_all = p_correct_all;
 % Trial ends when evts.endTrial updates.
 evts.endTrial = stimulusOff.delay(trialEndDelay);
 
