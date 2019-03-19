@@ -84,12 +84,14 @@ stim_azimuth = azimuth + p.stimulusAzimuth*iff(stimSide, -1, 1);
 
 %% Define stimulus
 
+stimFlicker = mod(t * p.stimFlickerFrequency, 2) > 1;
+
 stimulus = vis.patch(t, 'rect');
 stimulus.azimuth = stim_azimuth;
 stimulus.colour = [1,1,1]*stimColor;
 stimulus.dims = ones(1,2)*p.stimulusSize;
 
-stimulus.show = stimulusOn.to(stimulusOff);
+stimulus.show = stimulusOn.to(stimulusOff) & stimFlicker;
 vs.stimulus = stimulus;
 
 
@@ -179,12 +181,13 @@ try
     p.responseWindow = Inf;
     p.stimulusAzimuth = 30;
     p.stimulusSize = 20;
+    p.stimFlickerFrequency = 5;
     p.noiseBurstAmp = 0.01;
     p.noiseBurstDur = 0.5;
     p.rewardSize = 2.6;
     p.rewardKey = 'r';
     p.interTrialDelay_correct = 0.01;
-    p.interTrialDelay_incorrect = 1;
+    p.interTrialDelay_incorrect = 2;
     p.wheelGain = 50;
     p.encoderRes = 1024;
     p.preStimulusDelay = 0.5;
