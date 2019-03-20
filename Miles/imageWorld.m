@@ -22,16 +22,19 @@ idx = merge(map(evts.expStart, true), evts.newTrial.scan(@plus, 0).at(off));
 number = imgIds(idx);%.map(@num2str);
 numberStr = number.map(@num2str);
 
-% Test stim left
-stimulus = vis.image(t, 'none'); % create a Gabor grating
-stimulus.sourceImage = imgDir.map2(numberStr, ...
-  @(dir,num)loadVar(fullfile(dir, ['img' num '.mat']), 'img'));
-% stimulus.sourceImage = iff(evts.newTrial==1, ...
-%   map(p.one, @(v)loadVar(v, 'img')), ...
-%   map(p.two, @(v)loadVar(v, 'img')));
+% Set up stimulus
+imgraw = mapn(numberStr, imgDir, @(num, dir)loadVar([dir, '\img' num '.mat'], 'img'));
+
+stimulus = vis.image(t); 
+stimulus.sourceImage = 255*((imgraw + 2) / 4);
+stimulus.dims = 0.4*[750 188];
+
+imgUpdatedRaw = imgraw(1,1);
+imgUpdatedStim = stimulus.sourceImage(1,1);
+
 stimulus.show = on.to(off);
 
-vs.stimulus = stimulus; % store stimulus in visual stimuli set and log as 'leftStimulus'
+vs.stimulus = stimulus; % store stimulus in visual stimuli set
 
 %% End trial and log events
 % Let's use the next set of conditional paramters only if positive feedback
@@ -45,6 +48,8 @@ evts.stimulusOn = on;
 evts.endTrial = idx==N; 
 evts.index = idx;
 evts.numStr = numberStr;
+evts.imgUpdatedRaw = imgUpdatedRaw;
+evts.imgUpdatedStim = imgUpdatedStim;
 %% Parameter defaults
 % See timeSampler for full details on what values the *Delay paramters can
 % take.  Conditional perameters are defined as having ncols > 1, where each
