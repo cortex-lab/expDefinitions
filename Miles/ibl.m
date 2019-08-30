@@ -124,16 +124,8 @@ disengaged = iff(events.trialNum > p.minTrials, tooSlow, ...
 % The session is finished when either the session has been running for x
 % seconds, where x is trialDataInit.endAfter (20min on the first day, 40min
 % on the seconds, Inf otherwise), or when the subject is disengaged
-% finish = merge(at(true, disengaged),...
-%     at(true, events.expStart.delay(trialDataInit.endAfter)));
-finish = cond(disengaged, true,...
+events.expStop = cond(disengaged, true,...
     events.expStart.delay(trialDataInit.endAfter), true);
-
-% When finish takes a value (it may only sample true), this is posted to
-% events.expStop to trigger the end of the session
-expStop = events.expStop;
-expStop.Node.Listeners = [expStop.Node.Listeners, ...
-  into(finish, expStop)];
 
 %% Give feedback and end trial
 % Ensures reward size is not re-calculated at the response time
