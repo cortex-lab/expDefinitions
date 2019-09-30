@@ -1,6 +1,12 @@
 classdef advancedChoiceWorldExpPanel < eui.ExpPanel
-    %eui.SqueakExpPanel Basic UI control for monitoring an experiment
-    %   TODO
+    % UI control for monitoring advancedChoiceWorld
+    %   A UI panel that plots experiment updates specific to the
+    %   advancedChoiceWorld signals experiment definition.  Plots a
+    %   psychometric curve for each of the three response types, along with
+    %   a simulation of the current stimulus window and stimulus position
+    %   with respect to the response thresholds.
+    %
+    % See also eui.SqueakExpPanel
     %
     % Part of Rigbox
     
@@ -150,14 +156,15 @@ classdef advancedChoiceWorldExpPanel < eui.ExpPanel
                     
                     set(obj.ExperimentAxes.Handle, 'YLim', plotwindow + tt(end));
                     
-                    % update the velocity tracker too
-                    [tt, idx] = unique(tt);
-                    recentX = interp1(tt, xx(idx), tt(end)+[-0.3:0.05:0]);
-                    vel = mean(diff(recentX));
-                    set(obj.VelHands.Vel, 'XData', vel*[1 1]);
-                    obj.VelHands.MaxVel = max(abs([obj.VelHands.MaxVel vel]));
-                    set(obj.VelAxes, 'XLim', obj.VelHands.MaxVel*[-1 1]);
-                    
+                    if numel(xx) > 1
+                      % update the velocity tracker too
+                      [tt, idx] = unique(tt);
+                      recentX = interp1(tt, xx(idx), tt(end)+[-0.3:0.05:0]);
+                      vel = mean(diff(recentX));
+                      set(obj.VelHands.Vel, 'XData', vel*[1 1]);
+                      obj.VelHands.MaxVel = max(abs([obj.VelHands.MaxVel vel]));
+                      set(obj.VelAxes, 'XLim', obj.VelHands.MaxVel*[-1 1]);
+                    end
                 end
                 
                 
