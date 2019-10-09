@@ -6,7 +6,7 @@ function habituationWorld(t, evts, p, vs, in, out, audio)
 % latter mode is chosen by p.useWheel being true.
 
 %% parameters
-p.randomiseConditions; % Allows specific condition order
+% p.randomiseConditions; % Allows specific condition order
 wheel = in.wheel.skipRepeats(); % Wheel signal
 wheelDelta = evts.newTrial.at(wheel).scan(@plus, 0); % Wheel integrator
 wheelDelta = wheelDelta - wheelDelta.at(evts.newTrial); % Reset each trial
@@ -19,7 +19,7 @@ audioDevice = audio.Devices('default');
 onsetToneFreq = 5000;
 onsetToneDuration = 0.1;
 onsetToneRampDuration = 0.01;
-toneSamples = p.onsetToneAmplitude*events.expStart.map(@(x) ...
+toneSamples = p.onsetToneAmplitude*evts.expStart.map(@(x) ...
     aud.pureTone(onsetToneFreq, onsetToneDuration, audioDevice.DefaultSampleRate, ...
     onsetToneRampDuration, audioDevice.NrOutputChannels));
 
@@ -72,10 +72,10 @@ try
   p.movementThreshold = 1000; % Irrelevant when useWheel is false
   p.rewardTime = randi(10,1,100);
   p.avgRewardTime = 10; % Seconds
-  p.randomiseConditions = true;
+%   p.randomiseConditions = true; % Should be set in parameter GUI
   % Rewards for moving wheel
 %   p.useWheel = true;
-%   p.randomiseConditions = false;
+%   p.randomiseConditions = false; % Should be set in parameter GUI
 %   p.movementThreshold = 1:100:4000; % Gradually increase threshold
 %   p.rewardTime = 10; % Irrelevant when useWheel is true
 catch
