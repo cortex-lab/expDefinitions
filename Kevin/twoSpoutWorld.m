@@ -112,7 +112,8 @@ evts.trialReward = total_reward_trial;
 evts.rewardLeft = leftBaited;
 evts.rewardRight = rightBaited;
 % Accumulate reward signals and append microlitre units
-evts.totalRewardVolume = out.total_reward_trial.scan(@plus, 0).map(fun.partial(@sprintf, '%.1fµl'));
+evts.totalRewardVolume = total_reward_trial.scan(@plus, 0);
+evts.totalRewardMicroliters = evts.totalRewardVolume.map(fun.partial(@sprintf, '%.1fµl'));
 % Trial ends when evts.endTrial updates.
 evts.endTrial = stimulusOff.delay(0.01);
 
