@@ -13,8 +13,9 @@ function choiceWorld(t, events, p, visStim, inputs, outputs, audio)
 % in a session.  The gain only changes once and remains changed for all
 % future sessions.
 % 
-% There is no longer any change in reward volume, and there is no cue
-% interactive delay.
+% The reward volume changes by 0.1ul down to a minimum of 1.5ul provided
+% that the previous session had over 200 trials.  There is no cue interactive
+% delay.
 
 %% Fixed parameters
 contrastSet = p.contrastSet.at(events.expStart);

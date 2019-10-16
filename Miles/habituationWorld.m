@@ -1,9 +1,9 @@
 function habituationWorld(t, evts, p, vs, in, out, audio)
 %% habituationWorld
 % A simple function that will either output a reward at the end of each
-% trial whose length is defined by p.rewardTime, or when the wheel reaches
-% a threshold, defined as p.movementThreshold in arbitrary units.  The
-% latter mode is chosen by p.useWheel being true.
+% trial whose length is defined by p.avgRewardTime, or when the wheel
+% reaches a threshold, defined as p.movementThreshold in arbitrary units.
+% The latter mode is chosen by p.useWheel being true.
 
 %% parameters
 % p.randomiseConditions; % Allows specific condition order
@@ -70,14 +70,13 @@ try
   % Random rewards
   p.useWheel = false;
   p.movementThreshold = 1000; % Irrelevant when useWheel is false
-  p.rewardTime = randi(10,1,100);
   p.avgRewardTime = 10; % Seconds
 %   p.randomiseConditions = true; % Should be set in parameter GUI
   % Rewards for moving wheel
 %   p.useWheel = true;
 %   p.randomiseConditions = false; % Should be set in parameter GUI
 %   p.movementThreshold = 1:100:4000; % Gradually increase threshold
-%   p.rewardTime = 10; % Irrelevant when useWheel is true
+%   p.avgRewardTime = 10; % Irrelevant when useWheel is true
 catch
 end
 
