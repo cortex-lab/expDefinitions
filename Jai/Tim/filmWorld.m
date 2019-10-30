@@ -24,15 +24,18 @@ playbackRate = 5;
 % Number of times to loop each movie.
 loop = 0;
 % Number of times to repeat all movies in same randomly generated order (>=1).
-repeats = 1;
+repeats = 2;
+% The trial index given that we are using `events.trialNum` to index the
+% movies, and may want to repeat all movies more than once.
+trialIdx = mod(events.trialNum, nMovies) + 1;
 
 % Select a random movie from a movies directory each new trial:
 % Create a struct of the movies as a signal.
 moviesStruct = events.expStart.map(@(~) dir(fullfile(moviesDir, '*.mp4')));
 % Get index of movie within `movie_struct` randomly every trial.
 idxs = events.expStart.map(@(~) randperm(nMovies));
-movieIdx = iff(events.trialNum==0, 1, events.trialNum); %idxs(events.trialNum+1);
-%movieIdx = events.newTrial.delay(0.1).then(idxs(events.trialNum+1));
+movieIdx = trialIdx;
+%movieIdx = iff(events.trialNum==0, 1, events.trialNum); %idxs(events.trialNum+1);
 % Get movie to play from `moviesStruct`, and set as a subscriptable signal
 % so we can subscript its fields to get its full path.
 curMovie = movieIdx.then(moviesStruct(movieIdx)).subscriptable();
