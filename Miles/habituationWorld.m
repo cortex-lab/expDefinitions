@@ -29,7 +29,7 @@ audio.default = toneSamples.at(evts.newTrial);
 
 %% feedback
 reward = iff(p.useWheel, wheelDelta > p.movementThreshold,... % movement threshold reached
-  t - t.at(evts.newTrial) > map(p.avgRewardTime, @timeSampler)); % or at end of trial
+  t - t.at(evts.newTrial.delay(0)) > map(p.avgRewardTime, @timeSampler)); % or at end of trial
 reward = merge(rewardKeyPressed, evts.newTrial.setTrigger(reward));% only update when feedback changes to greater than 0, or reward key is pressed
 out.reward = p.rewardSize.at(reward.delay(0.5)); % output reward
 
