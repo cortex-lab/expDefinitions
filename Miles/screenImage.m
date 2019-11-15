@@ -3,6 +3,8 @@ function [x,y,im] = screenImage(pars)
 %  Given a struct of parameters from a Signals experiment, produces an
 %  image of the Gabor stimulus.
 %
+%  NB: Requires Image Processing Toolbox
+%
 % See also choiceWorldExpPanel
 %
 % 2017 NS created

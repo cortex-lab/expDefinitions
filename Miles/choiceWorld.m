@@ -561,6 +561,7 @@ trialData.trialContrast = randsample(contrasts, 1, true, w);
 %%%% Pick next side
 trialData.trialSide = iff(rand <= 0.5, -1, 1);
 end
+
 function learned = isLearned(ref)
 learned = false;
 subject = dat.parseExpRef(ref);
@@ -600,7 +601,7 @@ for i = length(expRef):-1:1
     fprintf('Low contrasts not yet introduced\n')
     return
   end
-  perfOnEasy = sum(feedback==1 & abs(contrast > 0.25)) / sum(abs(contrast > 0.25));
+  perfOnEasy = sum(feedback==1 & abs(contrast) > 0.25) / sum(abs(contrast) > 0.25);
   if length(feedback) > 200 && perfOnEasy > 0.8
     pooledCont = [pooledCont; contrast];
     pooledIncl = [pooledIncl; incl];

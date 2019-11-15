@@ -65,7 +65,7 @@ classdef choiceWorldExpPanel < eui.ExpPanel
     end
   end
   
-  methods %(Access = protected)
+  methods (Access = protected)
     function setContrast(obj, ~, ~)
       cL = obj.contrastLeft;
       cR = obj.contrastRight;
@@ -149,7 +149,7 @@ classdef choiceWorldExpPanel < eui.ExpPanel
         plotwindow = [-5 1];
         lastidx = obj.InputSensorPosCount;
         
-        if lastidx>0
+        if lastidx > 1
           
           firstidx = find(obj.InputSensorPosTime>obj.InputSensorPosTime(lastidx)+plotwindow(1),1);
           
@@ -161,11 +161,14 @@ classdef choiceWorldExpPanel < eui.ExpPanel
             'YData', tt);
           
           set(obj.ExperimentAxes.Handle, 'YLim', plotwindow + tt(end));
-          
           % update the velocity tracker too
           [tt, idx] = unique(tt);
-          recentX = interp1(tt, xx(idx), tt(end)+[-0.3:0.05:0]);
-          vel = mean(diff(recentX));
+          if numel(tt) > 1
+            recentX = interp1(tt, xx(idx), tt(end)+(-0.3:0.05:0));
+            vel = mean(diff(recentX));
+          else
+            vel = 0;
+          end
           set(obj.VelHands.Vel, 'XData', vel*[1 1]);
           obj.VelHands.MaxVel = max(abs([obj.VelHands.MaxVel vel]));
           set(obj.VelAxes, 'XLim', obj.VelHands.MaxVel*[-1 1]);
@@ -288,13 +291,15 @@ classdef choiceWorldExpPanel < eui.ExpPanel
               set(obj.ExperimentHands.corrIcon, 'XData', 0, 'YData', NaN);
               
               obj.ExperimentAxes.XLim = startPos+1.5*th*[-1 1];
-              [x,y,im] = screenImage(obj.Parameters.Struct);
-              set(obj.ScreenHands.Im, 'XData', x, 'YData', y, 'CData', im);
+              if ~isempty(obj.ScreenAxes)
+                [x,y,im] = screenImage(obj.Parameters.Struct);
+                set(obj.ScreenHands.Im, 'XData', x, 'YData', y, 'CData', im);
+              end
             case 'events.stimulusOff'
-              
-              set(obj.ScreenHands.Im, 'CData', 127*ones(size(get(obj.ScreenHands.Im, 'CData'))));
-              caxis(obj.ScreenAxes, [0 255]);
-              
+              if ~isempty(obj.ScreenAxes)
+                set(obj.ScreenHands.Im, 'CData', 127*ones(size(get(obj.ScreenHands.Im, 'CData'))));
+                caxis(obj.ScreenAxes, [0 255]);
+              end
               % re-set the response window starting now
               ioTime = (24*3600*datenum(updates(ui).timestamp))-(24*3600*obj.StartedDateTime);
               yd = get(obj.ExperimentHands.threshR, 'YData');
@@ -448,11 +453,23 @@ classdef choiceWorldExpPanel < eui.ExpPanel
       
       uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
       
-      obj.ScreenAxes = axes('Parent', plotgrid);
-      obj.ScreenHands.Im = imagesc(0,0,127);
-      axis(obj.ScreenAxes, 'image');
-      axis(obj.ScreenAxes, 'off');
-      colormap(obj.ScreenAxes, 'gray');
+      % The function screenImage used for the Screen plot requires the
+      % Image Processing Toolbox.  If this isn't present, deactivate the
+      % axes
+      toolboxes = ver;
+      if isempty(intersect('Image Processing Toolbox', {toolboxes.Name}))
+        % Toolbox not found
+        warning('Rigbox:eui:choiceExpPanel:toolboxRequired', ...
+        'The Image Processing Toolbox is required for full functionality')
+        scH = [];
+      else % Create screen image plot
+        obj.ScreenAxes = axes('Parent', plotgrid);
+        obj.ScreenHands.Im = imagesc(0,0,127);
+        axis(obj.ScreenAxes, 'image');
+        axis(obj.ScreenAxes, 'off');
+        colormap(obj.ScreenAxes, 'gray');
+        scH = -2;
+      end
       
       uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
       
@@ -494,7 +511,7 @@ classdef choiceWorldExpPanel < eui.ExpPanel
       axis(obj.VelAxes, 'off');
       obj.VelHands.MaxVel = 1e-9;
       
-      set(plotgrid, 'Sizes', [30 -2 30 -2 10 -4 5 -1]);
+      set(plotgrid, 'Sizes', [30 -2 30 scH 10 -4 5 -1]);
     end
   end
   
