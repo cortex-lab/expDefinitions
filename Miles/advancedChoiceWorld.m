@@ -124,7 +124,8 @@ evts.response = response;
 evts.feedback = feedback;
 evts.interactiveOn = interactiveOn;
 % Accumulate reward signals and append microlitre units
-evts.totalReward = out.reward.scan(@plus, 0).map(fun.partial(@sprintf, '%.1fµl')); 
+volumeUnits = @(v)sprintf('%.1f%cl', v, char(956));
+evts.totalReward = out.reward.scan(@plus, 0).map(volumeUnits); 
 
 % Trial ends when evts.endTrial updates.  
 % If the value of evts.endTrial is false, the current set of conditional

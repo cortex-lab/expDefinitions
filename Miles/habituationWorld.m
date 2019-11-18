@@ -59,7 +59,8 @@ evts.endTrial = nextCondition.at(stimulusOff).delay(p.interTrialDelay);
 % evts.reward = reward;
 evts.thr = p.movementThreshold;
 evts.trialSide = trialSide;
-evts.totalWater = out.reward.scan(@plus, 0).map(fun.partial(@sprintf, '%.1fµl'));
+volumeUnits = fun.partial(@sprintf, '%2$.1f%1$cl', char(956));
+evts.totalWater = out.reward.scan(@plus, 0).map(volumeUnits);
 
 try
   p.onsetToneAmplitude = 0.15;
