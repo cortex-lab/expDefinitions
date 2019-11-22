@@ -3,6 +3,11 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
   %   TODO
   %
   % Part of Rigbox
+  
+  properties
+    % Trials per minute window size
+    WindowSize = 20
+  end
     
   properties (Access = protected)
     PsychometricAxes % Handle to axes of psychometric plot
@@ -34,7 +39,8 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
       obj.Block.numCompletedTrials = -1;
       obj.Block.trial = struct('contrastLeft', [], 'contrastRight', [], ...
         'response', [], 'repeatNum', [], 'feedback', [],...
-        'wheelGain', [], 'newTrialTimes', []);
+        'wheelGain', [], 'newTrialTimes', [], ...
+        'baselineRT', [], 'windowedRT', [], 'tMin', []);
       obj.Listeners = [obj.Listeners,...
         addlistener(obj,'contrastLeft','PostSet',@obj.setContrast), ...
         addlistener(obj,'contrastRight','PostSet',@obj.setContrast)];
@@ -93,9 +99,7 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
           xx = obj.InputSensorPos(firstidx:lastidx);
           tt = obj.InputSensorPosTime(firstidx:lastidx);
           
-          set(obj.ExperimentHands.wheelH,...
-            'XData', xx,...
-            'YData', tt);
+          set(obj.ExperimentHands.wheelH, 'XData', xx, 'YData', tt);
           
           set(obj.ExperimentAxes.Handle, 'YLim', plotwindow + tt(end));
           % update the velocity tracker too
@@ -228,15 +232,7 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
               set(obj.ExperimentHands.corrIcon, 'XData', 0, 'YData', NaN);
               
               obj.ExperimentAxes.XLim = startPos+1.5*th*[-1 1];
-              if ~isempty(obj.ScreenAxes)
-                [x,y,im] = screenImage(obj.Parameters.Struct);
-                set(obj.ScreenHands.Im, 'XData', x, 'YData', y, 'CData', im);
-              end
             case 'events.stimulusOff'
-              if ~isempty(obj.ScreenAxes)
-                set(obj.ScreenHands.Im, 'CData', 127*ones(size(get(obj.ScreenHands.Im, 'CData'))));
-                caxis(obj.ScreenAxes, [0 255]);
-              end
               % re-set the response window starting now
               ioTime = (24*3600*datenum(updates(ui).timestamp))-(24*3600*obj.StartedDateTime);
               yd = get(obj.ExperimentHands.threshR, 'YData');
@@ -272,19 +268,42 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
                   'YData', NaN);
               end
               
-            case 'events.azimuth'
-              
-              az = updates(ui).value;
-              set(obj.ScreenAxes, 'XLim', -az+[-135 135]); % trick to move visual stimuli by moving the xlim in the opposite way
-
             case 'events.trialNum'
               set(obj.TrialCountLabel, ...
                 'String', num2str(updates(ui).value));
               
+            case {'events.baselineRT', 'events.windowedRT'}
+              name = signame(8:end);
+%               value = str2double(strrep(updates(ui).value, ' sec', ''));
+              value = updates(ui).value;
+              obj.Block.trial(obj.Block.numCompletedTrials+1).(name) = value;
+              
+            case 'events.newTrial'
+              % Update RT plot
+              n = obj.Block.numCompletedTrials+1;
+              trialTimes = [obj.Block.trial.newTrialTimes];
+              N = obj.WindowSize;
+              if length(trialTimes) > N
+                tMin = 1/(mean(diff(trialTimes(end-N+1:end)))*24*60);
+                p = obj.Parameters.Struct;
+                rtCriterion = p.rtCriterion;
+                baseRT = [obj.Block.trial.baselineRT];
+                winRT = [obj.Block.trial.windowedRT];
+                set(obj.ScreenHands.baseRT, 'XData', 1:n-1, 'YData', baseRT*rtCriterion)
+                startIdx = numel(baseRT)+1-numel(winRT);
+                set(obj.ScreenHands.winRT, 'XData', startIdx:numel(baseRT), 'YData', winRT)
+                tMin = iff(all(isnan(obj.ScreenHands.tMin.YData)), ...
+                  tMin, [obj.ScreenHands.tMin.YData tMin]);
+                set(obj.ScreenHands.tMin, ...
+                  'XData', obj.WindowSize:obj.WindowSize-1+length(tMin), ...
+                  'YData', tMin)
+                obj.ScreenAxes.YLim = [0 max(baseRT(startIdx:end)*rtCriterion)+0.1];
+                %TODO
+              end
+              
             case {'events.repeatNum', 'events.totalWater'...
                 'events.disengaged', 'events.pctDecrease', 'events.proportionLeft',...
-                'events.trialsToSwitch', 'inputs.lick', 'outputs.reward',...
-                'events.prestimQuiescentPeriod'}
+                'inputs.lick', 'outputs.reward', 'events.prestimQuiescentPeriod'}
               
               if ~isKey(obj.LabelsMap, signame)
                 obj.LabelsMap(signame) = obj.addInfoField(signame, '');
@@ -302,36 +321,42 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
       build@eui.SqueakExpPanel(obj, parent);
       
       % Build the psychometric axes
-      plotgrid = uiextras.VBox('Parent', obj.CustomPanel, 'Padding', 5);
+      plotgrid = uiextras.VBox('Parent', obj.CustomPanel, 'Padding', 5, 'Spacing', 10);
       
-      uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
+%       uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
       
       obj.PsychometricAxes = bui.Axes(plotgrid);
-      obj.PsychometricAxes.ActivePositionProperty = 'position';
       obj.PsychometricAxes.YLim = [-1 101];
       obj.PsychometricAxes.NextPlot = 'add';
+      obj.PsychometricAxes.Title = 'Pyschometric plot';
+      obj.PsychometricAxes.xLabel('Contrast');
+      yyaxis(obj.PsychometricAxes.Handle,'left')
+      set(obj.PsychometricAxes.Handle, 'YColor', [0 .8 .8])
+      obj.PsychometricAxes.yLabel('% Leftward');
+      yyaxis(obj.PsychometricAxes.Handle,'right')
+      set(obj.PsychometricAxes.Handle, 'YColor', 'm')
+      obj.PsychometricAxes.yLabel('% Rightward');
       
-      uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
+%       uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
       
-      % The function screenImage used for the Screen plot requires the
-      % Image Processing Toolbox.  If this isn't present, deactivate the
-      % axes
-      toolboxes = ver;
-      if isempty(intersect('Image Processing Toolbox', {toolboxes.Name}))
-        % Toolbox not found
-        warning('Rigbox:eui:choiceExpPanel:toolboxRequired', ...
-        'The Image Processing Toolbox is required for full functionality')
-        scH = [];
-      else % Create screen image plot
-        obj.ScreenAxes = axes('Parent', plotgrid);
-        obj.ScreenHands.Im = imagesc(0,0,127);
-        axis(obj.ScreenAxes, 'image');
-        axis(obj.ScreenAxes, 'off');
-        colormap(obj.ScreenAxes, 'gray');
-        scH = -2;
-      end
+      obj.ScreenAxes = bui.Axes(plotgrid);
+      obj.ScreenAxes.NextPlot = 'add';
+      obj.ScreenAxes.Title = 'Reaction time';
+      obj.ScreenAxes.xLabel('# trials');
+      obj.ScreenAxes.yLabel('RT (s)');
+      x = obj.Parameters.Struct.minTrials;
+      obj.ScreenAxes.plot([x, x], [60, 60], 'k:');
+      obj.ScreenAxes.YLim = [0 5];
+      obj.ScreenHands.winRT = plot(obj.ScreenAxes, nan(1,2), nan(1,2), 'k');
+      obj.ScreenHands.baseRT = plot(obj.ScreenAxes, nan(1,2), nan(1,2), 'r');
+      yyaxis(obj.ScreenAxes.Handle,'right')
+      obj.ScreenHands.tMin = plot(obj.ScreenAxes, nan(1,2), nan(1,2), 'Color', [.8,.8,.8]);
+      obj.ScreenAxes.yLabel('Trials / min');
+      set(obj.ScreenAxes.Handle, 'YColor', [.5,.5,.5])
+      yyaxis(obj.ScreenAxes.Handle,'left')
+      scH = -2;
       
-      uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
+%       uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
       
       obj.ExperimentAxes = bui.Axes(plotgrid);
       obj.ExperimentAxes.ActivePositionProperty = 'position';
@@ -371,7 +396,8 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
       axis(obj.VelAxes, 'off');
       obj.VelHands.MaxVel = 1e-9;
       
-      set(plotgrid, 'Sizes', [30 -2 30 scH 10 -4 5 -1]);
+%       set(plotgrid, 'Sizes', [30 -2 30 scH 10 -4 5 -1]);
+      set(plotgrid, 'Sizes', [-2 scH -4 5 -1])
     end
   end
   

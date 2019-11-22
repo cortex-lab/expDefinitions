@@ -185,8 +185,8 @@ events.endTrial = at(~trialData.repeatTrial, stimOff.identity);
 events.disengaged = skipRepeats(keepWhen(cond(...
   tooSlow, 'long RT',...
   true, 'false'), events.trialNum > p.minTrials));
-events.windowedRT = windowedRT.map(fun.partial(@sprintf, '%.1f sec'));
-events.baselineRT = baselineRT.map(fun.partial(@sprintf, '%.1f sec'));
+events.windowedRT = windowedRT;%.map(fun.partial(@sprintf, '%.1f sec'));
+events.baselineRT = baselineRT;%.map(fun.partial(@sprintf, '%.1f sec'));
 events.pctDecrease = map(((baselinePerf - windowedPerf)/baselinePerf)*100, fun.partial(@sprintf, '%.1f%%'));
 events.endAfter = trialDataInit.endAfter/60;
 
