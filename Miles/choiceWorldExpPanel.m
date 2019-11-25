@@ -129,6 +129,8 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
           obj.PsychometricAxes.clear();
           if obj.Block.numCompletedTrials > 2
             psy.plot2AUFC(obj.PsychometricAxes.Handle, obj.Block);
+            contrast = diff(obj.Parameters.Struct.stimulusContrast)*100;
+            obj.PsychometricAxes.plot(repmat(contrast,1,2),[0 100],'k:')
           end
           
           % make sure we have all necessary data about new trial
@@ -289,7 +291,7 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
                 rtCriterion = p.rtCriterion;
                 baseRT = [obj.Block.trial.baselineRT];
                 winRT = [obj.Block.trial.windowedRT];
-                set(obj.ScreenHands.baseRT, 'XData', 1:n-1, 'YData', baseRT*rtCriterion)
+                set(obj.ScreenHands.baseRT, 'XData', 1:length(baseRT), 'YData', baseRT*rtCriterion)
                 startIdx = numel(baseRT)+1-numel(winRT);
                 set(obj.ScreenHands.winRT, 'XData', startIdx:numel(baseRT), 'YData', winRT)
                 tMin = iff(all(isnan(obj.ScreenHands.tMin.YData)), ...
@@ -345,7 +347,7 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
       obj.ScreenAxes.xLabel('# trials');
       obj.ScreenAxes.yLabel('RT (s)');
       x = obj.Parameters.Struct.minTrials;
-      obj.ScreenAxes.plot([x, x], [60, 60], 'k:');
+      plot(obj.ScreenAxes, [x, x], [0, 60], 'k:');
       obj.ScreenAxes.YLim = [0 5];
       obj.ScreenHands.winRT = plot(obj.ScreenAxes, nan(1,2), nan(1,2), 'k');
       obj.ScreenHands.baseRT = plot(obj.ScreenAxes, nan(1,2), nan(1,2), 'r');
