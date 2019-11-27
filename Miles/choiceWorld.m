@@ -27,6 +27,7 @@ rewardSize = p.rewardSize.at(events.expStart);
 initialGain = p.initialGain.at(events.expStart);
 normalGain = p.normalGain.at(events.expStart);
 responseWindow = p.responseWindow.at(events.expStart);
+descrimOn = p.descrimination.at(events.expStart);
 
 % Sounds
 audioDevice = audio.Devices('default');
@@ -43,7 +44,7 @@ missNoiseSamples = p.missNoiseAmplitude*events.expStart.map(@(x) ...
 %% Initialize trial data
 trialDataInit = events.expStart.mapn(...
     contrastSet, startingContrasts, repeatOnMiss, ...
-    trialsToBuffer, trialsToZeroContrast, rewardSize,...
+    trialsToBuffer, trialsToZeroContrast, rewardSize, descrimOn,...
     @initializeTrialData).subscriptable;
 
 %% Set up wheel 
@@ -146,24 +147,48 @@ stimOff = threshold.delay(iti);
 % 2) wheel-conditional during interactive  
 % 3) fixed at response displacement azimuth after response
 trialSide = trialData.trialSide.at(stimOn);
-azimuth = cond( ...
-    stimOn.to(threshold), p.startingAzimuth*trialSide + stimDisplacement, ...
-    threshold.to(events.newTrial), ...
-    p.startingAzimuth*trialSide + ...
-    iff(response~=3, -response*abs(p.responseDisplacement), trialSide*abs(p.responseDisplacement)));
+% azimuthLeft = cond( ...
+%     stimOn.to(threshold), p.startingAzimuth*trialSide + stimDisplacement, ...
+%     threshold.to(events.newTrial), ...
+%     p.startingAzimuth*trialSide + ...
+%     iff(response~=3, -response*abs(p.responseDisplacement), trialSide*abs(p.responseDisplacement)));
+%   
+% azimuthRight = cond( ...
+%     stimOn.to(threshold), -p.startingAzimuth*trialSide + stimDisplacement, ...
+%     threshold.to(events.newTrial), ...
+%     -p.startingAzimuth*trialSide + ...
+%     iff(response~=3, -response*abs(p.responseDisplacement), trialSide*abs(p.responseDisplacement)));
 
+  azimuth = cond(...
+    stimOn.to(threshold), stimDisplacement,... % Closed-loop condition, where the azimuth yoked to the wheel
+    threshold.to(events.newTrial), iff(response ~= 3, -response*abs(p.startingAzimuth), trialSide*abs(p.responseDisplacement))); % Once threshold is reached the stimulus is fixed again
+%   azimuth = cond(...
+%     stimOn.to(threshold), stimDisplacement); % Once threshold is reached the stimulus is fixed again
+
+  
 % Stim flicker
 % stimFlicker = sin((t - t.at(stimOn))*stimFlickerFrequency*2*pi) > 0;
-stim = vis.grating(t, 'sine', 'gaussian');
-stim.sigma = p.sigma;
-stim.spatialFreq = p.spatialFreq;
-stim.phase = 2*pi*events.newTrial.map(@(v)rand);
-stim.azimuth = azimuth;
+stimLeft = vis.grating(t, 'sine', 'gaussian');
+stimLeft.sigma = p.sigma;
+stimLeft.spatialFreq = p.spatialFreq;
+stimLeft.phase = 2*pi*events.newTrial.map(@(v)rand);
+stimLeft.azimuth = -p.startingAzimuth + azimuth;
 %stim.contrast = trialContrast.at(stimOn)*stimFlicker;
-stim.contrast = trialContrast;
-stim.show = stimOn.to(stimOff);
+stimLeft.contrast = trialContrast(1);
+stimLeft.show = stimOn.to(stimOff);
 
-visStim.stim = stim;
+visStim.L = stimLeft;
+
+stimRight = vis.grating(t, 'sine', 'gaussian');
+stimRight.sigma = p.sigma;
+stimRight.spatialFreq = p.spatialFreq;
+stimRight.phase = 2*pi*events.newTrial.map(@(v)rand);
+stimRight.azimuth = p.startingAzimuth + azimuth;
+%stim.contrast = trialContrast.at(stimOn)*stimFlicker;
+stimRight.contrast = trialContrast(2);
+stimRight.show = stimOn.to(stimOff);
+
+visStim.R = stimRight;
 
 %% Display and save
 % events.pPerf = (baselinePerf - windowedPerf)/baselinePerf > p.pctPerfDecrease/100;
@@ -196,8 +221,8 @@ events.bias = bias;
 % Performance
 events.contrastSet = trialData.contrastSet;
 events.repeatOnMiss = trialData.repeatOnMiss;
-events.contrastLeft = iff(trialData.trialSide == -1, trialData.trialContrast, trialData.trialContrast*0);
-events.contrastRight = iff(trialData.trialSide == 1, trialData.trialContrast, trialData.trialContrast*0);
+events.contrastLeft = trialData.trialContrast(1);
+events.contrastRight = trialData.trialContrast(2);
 % events.trialSide = trialData.trialSide;
 events.hit = hit;
 events.response = at(iff(response==3, 0, response), threshold);
@@ -230,6 +255,7 @@ p.rewardSize = 3; % (microliters)
 % Initial wheel gain
 p.initialGain = 8; % ~= 20 @ 90 deg;
 p.normalGain = 4; % ~= 10 @ 90 deg;
+p.descrimination = false;
 
 % Timing
 p.prestimQuiescentTime = [0.2, 0.5, 0.35]'; % (seconds)
@@ -287,7 +313,7 @@ end
 
 function trialDataInit = initializeTrialData(expRef, ...
     contrastSet,startingContrasts,repeatOnMiss,trialsToBuffer, ...
-    trialsToZeroContrast,rewardSize)
+    trialsToZeroContrast,rewardSize,descrimination)
 
 %%%% Get the subject
 % (from events.expStart - derive subject from expRef)
@@ -305,6 +331,8 @@ trialDataInit.repeatOnMiss = repeatOnMiss;
 trialDataInit.repeatTrial = false;
 % Initialize hit/miss
 trialDataInit.hit = nan;
+% Contrast descrimination off by default
+trialDataInit.descrimOn = false;
 
 %%%% Load the last experiment for the subject if it exists
 % (note: MC creates folder on initilization, so start search at 1-back)
@@ -316,6 +344,7 @@ trialDataInit.endAfter = iff(dayNum<3, 60*20*dayNum, Inf);
 trialDataInit.endAfter = Inf;
 
 useOldParams = false;
+learned = 0;
 if length(expRef) > 1
     learned = isLearned(expRef{end}); % FIXME Revise logic; can a mouse unlearn?
     % Loop through blocks from latest to oldest, if any have the relevant
@@ -384,9 +413,12 @@ if useOldParams
     else
         trialDataInit.rewardSize = lastRewardSize;
     end
-    if learned
+    if learned == true
       % Remove repeat on incorrect
-      trialDataInit.repeatOnMiss = zeros(1,length(trialDataInit.contrastSet));
+      %trialDataInit.repeatOnMiss = zeros(1,length(trialDataInit.contrastSet));
+    elseif learned == -1 && descrimination == true
+      % Fit params not good, add contrast descrimination
+      trialDataInit.descrimOn = true;
     end
     
 else
@@ -395,16 +427,29 @@ else
     trialDataInit.contrastSet = contrastSet';
     trialDataInit.useContrasts = startingContrasts;
     trialDataInit.hitBuffer = nan(trialsToBuffer, length(contrastSet), 2); % two tables, one for each side
-    trialDataInit.trialsToZeroContrast = trialsToZeroContrast;  
+    trialDataInit.trialsToZeroContrast = trialsToZeroContrast;
     % Initialize water reward size & wheel gain
     trialDataInit.rewardSize = rewardSize;
 end
 
 % Set the first contrast
-contrasts = trialDataInit.contrastSet(trialDataInit.useContrasts);
-w = ((contrasts~=0) + 1) / length(unique([contrasts, -contrasts]));
-trialDataInit.trialContrast = randsample(contrasts, 1, true, w);
-trialDataInit.trialSide = iff(rand <= 0.5, -1, 1);
+if trialDataInit.descrimOn
+  c = trialDataInit.contrastSet(trialDataInit.useContrasts);
+  c = iff(exist('combvec', 'builtin'), @()combvec(c, c), @()CombVec(c, c));
+  C = unique([c, flipud(c)]', 'rows')';
+  % Pick contrasts greater than x or [0 0] trial
+  minDiff = 0.12;
+  trialDataInit.trialContrast = datasample(C(:,abs(diff(C) | ~any(C))>minDiff),1,2);
+  largerSize = sign(diff(trialDataInit.trialContrast));
+  trialDataInit.trialSide = iff(largerSize == 0, @()iff(rand <= 0.5, -1, 1), largerSize);
+else
+  contrasts = trialDataInit.contrastSet(trialDataInit.useContrasts);
+  %w = ((contrasts~=0) + 1) / length(unique([contrasts, -contrasts]));
+  %C = randsample(contrasts, 1, true, w);
+  C = randsample(contrasts, 1);
+  trialDataInit.trialSide = iff(rand <= 0.5, -1, 1);
+  trialDataInit.trialContrast = iff(trialDataInit.trialSide == 1, [0 C], [C 0]);
+end
 end
 
 function trialData = updateTrialData(trialData,responseData)
@@ -421,7 +466,7 @@ bias = responseData(4)/10;
 % end
 % 
 %%%% Get index of current trial contrast
-currentContrastIdx = trialData.trialContrast == trialData.contrastSet;
+currentContrastIdx = max(trialData.trialContrast) == trialData.contrastSet;
 
 %%%% Define response type based on trial condition
 trialData.hit = response~=3 && stimDisplacement*trialData.trialSide < 0;
@@ -538,7 +583,8 @@ end
 
 %%%% Set flag to repeat - skip trial choice if so
 if ~trialData.hit && any(trialData.repeatOnMiss==true) && ...
-        ismember(trialData.trialContrast,trialData.contrastSet(trialData.repeatOnMiss))
+        (ismember(abs(diff(trialData.trialContrast)),trialData.contrastSet(trialData.repeatOnMiss)) || ...
+        (abs(diff(trialData.trialContrast)) >= min(trialData.contrastSet(trialData.repeatOnMiss))))
     % If the response is a no-go, repeat the same trial side
     if response ~= 3
       % Otherwise take biased sample from normal distribution
@@ -554,13 +600,23 @@ else
 end
 
 %%%% Pick next contrast
-
-% Next contrast is random from current contrast set
-contrasts = trialData.contrastSet(trialData.useContrasts);
-w = ((contrasts~=0) + 1) / length(unique([contrasts, -contrasts]));
-trialData.trialContrast = randsample(contrasts, 1, true, w);
-%%%% Pick next side
-trialData.trialSide = iff(rand <= 0.5, -1, 1);
+if trialData.descrimOn
+  c = trialData.contrastSet(trialData.useContrasts);
+  c = iff(exist('combvec', 'builtin'), @()combvec(c, c), @()CombVec(c, c));
+  C = unique([c, flipud(c)]', 'rows')';
+  % Pick contrasts greater than x or [0 0] trial
+  minDiff = 0.12;
+  trialData.trialContrast = datasample(C(:,abs(diff(C) | ~any(C))>minDiff),1,2);
+  largerSize = sign(diff(trialData.trialContrast));
+  trialData.trialSide = iff(largerSize == 0, @()iff(rand <= 0.5, -1, 1), largerSize);
+else
+  contrasts = trialData.contrastSet(trialData.useContrasts);
+  %w = ((contrasts~=0) + 1) / length(unique([contrasts, -contrasts]));
+  %C = randsample(contrasts, 1, true, w);
+  C = randsample(contrasts, 1);
+  trialData.trialSide = iff(rand <= 0.5, -1, 1);
+  trialData.trialContrast = iff(trialData.trialSide == 1, [0 C], [C 0]);
+end
 end
 
 function learned = isLearned(ref)
@@ -623,6 +679,7 @@ for i = length(expRef):-1:1
         return
       else
         fprintf('Fit parameter values below threshold\n')
+        learned = -1;
         return
       end
     end

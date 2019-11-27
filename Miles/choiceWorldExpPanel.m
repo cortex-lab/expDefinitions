@@ -129,8 +129,14 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
           obj.PsychometricAxes.clear();
           if obj.Block.numCompletedTrials > 2
             psy.plot2AUFC(obj.PsychometricAxes.Handle, obj.Block);
-            contrast = diff(obj.Parameters.Struct.stimulusContrast)*100;
-            obj.PsychometricAxes.plot(repmat(contrast,1,2),[0 100],'k:')
+            
+            if any(obj.Parameters.Struct.stimulusContrast==0)
+              contrast = diff(obj.Parameters.Struct.stimulusContrast)*100;
+              obj.PsychometricAxes.plot(repmat(contrast,1,2),[0 100],'k:')
+            else
+              contrast = obj.Parameters.Struct.stimulusContrast*100;
+              obj.PsychometricAxes.plot(repmat(contrast,2,1),[0 100;0 100]','k:')
+            end
           end
           
           % make sure we have all necessary data about new trial
