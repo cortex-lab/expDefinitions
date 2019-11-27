@@ -7,8 +7,9 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
   properties
     % Trials per minute window size
     WindowSize = 20
+    RewardUnits = sprintf('%cl', char(956))
   end
-    
+  
   properties (Access = protected)
     PsychometricAxes % Handle to axes of psychometric plot
     ExperimentAxes % Handle to axes of wheel trace and threhold line plot
@@ -37,10 +38,15 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
       obj.InputSensorPosTime = nan(1000*30, 1);
       obj.InputSensorPosCount = 0;
       obj.Block.numCompletedTrials = -1;
+      obj.Block.totalReward = 0;
       obj.Block.trial = struct('contrastLeft', [], 'contrastRight', [], ...
         'response', [], 'repeatNum', [], 'feedback', [],...
         'wheelGain', [], 'newTrialTimes', [], ...
         'baselineRT', [], 'windowedRT', [], 'tMin', []);
+      % Add our reward info field.  Unlike TrialCountLabel we keep this in
+      % the LabelsMap so that it updates green when changing
+      obj.LabelsMap('outputs.reward') = obj.addInfoField('Reward', ['0 ' obj.RewardUnits]);
+      set(obj.LabelsMap('outputs.reward'), 'UserData', clock);
       obj.Listeners = [obj.Listeners,...
         addlistener(obj,'contrastLeft','PostSet',@obj.setContrast), ...
         addlistener(obj,'contrastRight','PostSet',@obj.setContrast)];
@@ -183,7 +189,7 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
               if isempty(startPos); startPos = obj.InputSensorPos(obj.InputSensorPosCount); end % for first trial
               tL = startPos-th;
               tR = startPos+th;
-                             
+              
               set(obj.ExperimentHands.threshL, ...
                 'XData', [tL tL], 'YData', ioTime+[0 respWin]);
               set(obj.ExperimentHands.threshR, ...
@@ -276,13 +282,12 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
               
             case {'events.baselineRT', 'events.windowedRT'}
               name = signame(8:end);
-%               value = str2double(strrep(updates(ui).value, ' sec', ''));
+              % value = str2double(strrep(updates(ui).value, ' sec', ''));
               value = updates(ui).value;
               obj.Block.trial(obj.Block.numCompletedTrials+1).(name) = value;
               
             case 'events.newTrial'
               % Update RT plot
-              n = obj.Block.numCompletedTrials+1;
               trialTimes = [obj.Block.trial.newTrialTimes];
               N = obj.WindowSize;
               if length(trialTimes) > N
@@ -303,9 +308,18 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
                 %TODO
               end
               
+            case 'outputs.reward'
+              % Keep track of total reward and display both
+              obj.Block.totalReward = obj.Block.totalReward + updates(ui).value;
+              str = sprintf('%.2f%s (%.2f%s)', ...
+                obj.Block.totalReward, obj.RewardUnits, ...
+                updates(ui).value, obj.RewardUnits);
+              set(obj.LabelsMap(signame), 'String', str, 'UserData', clock,...
+                'ForegroundColor', obj.RecentColour);
+              
             case {'events.repeatNum', 'events.totalWater'...
                 'events.disengaged', 'events.pctDecrease', 'events.proportionLeft',...
-                'inputs.lick', 'outputs.reward', 'events.prestimQuiescentPeriod'}
+                'inputs.lick', 'events.prestimQuiescentPeriod'}
               
               if ~isKey(obj.LabelsMap, signame)
                 obj.LabelsMap(signame) = obj.addInfoField(signame, '');
@@ -325,7 +339,7 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
       % Build the psychometric axes
       plotgrid = uiextras.VBox('Parent', obj.CustomPanel, 'Padding', 5, 'Spacing', 10);
       
-%       uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
+      %       uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
       
       obj.PsychometricAxes = bui.Axes(plotgrid);
       obj.PsychometricAxes.YLim = [-1 101];
@@ -339,7 +353,7 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
       set(obj.PsychometricAxes.Handle, 'YColor', 'm')
       obj.PsychometricAxes.yLabel('% Rightward');
       
-%       uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
+      %       uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
       
       obj.ScreenAxes = bui.Axes(plotgrid);
       obj.ScreenAxes.NextPlot = 'add';
@@ -358,7 +372,7 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
       yyaxis(obj.ScreenAxes.Handle,'left')
       scH = -2;
       
-%       uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
+      %       uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
       
       obj.ExperimentAxes = bui.Axes(plotgrid);
       obj.ExperimentAxes.ActivePositionProperty = 'position';
@@ -398,9 +412,8 @@ classdef choiceWorldExpPanel < eui.SqueakExpPanel
       axis(obj.VelAxes, 'off');
       obj.VelHands.MaxVel = 1e-9;
       
-%       set(plotgrid, 'Sizes', [30 -2 30 scH 10 -4 5 -1]);
+      %       set(plotgrid, 'Sizes', [30 -2 30 scH 10 -4 5 -1]);
       set(plotgrid, 'Sizes', [-2 scH -4 5 -1])
     end
   end
-  
 end
