@@ -205,8 +205,6 @@ events.useContrasts = trialData.useContrasts;
 events.trialsToZeroContrast = trialData.trialsToZeroContrast;
 events.hitBuffer = trialData.hitBuffer;
 events.wheelGain = wheelGain;
-volumeUnits = fun.partial(@sprintf, '%2$.1f%1$cl', char(956));
-events.totalWater = outputs.reward.scan(@plus, 0).map(volumeUnits);
 
 %% Defaults
 try 
