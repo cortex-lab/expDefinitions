@@ -317,10 +317,10 @@ trialDataInit.endAfter = Inf;
 
 useOldParams = false;
 if length(expRef) > 1
+    learned = isLearned(expRef{end}); % FIXME Revise logic; can a mouse unlearn?
     % Loop through blocks from latest to oldest, if any have the relevant
     % parameters then carry them over
     for check_expt = length(expRef)-1:-1:1
-        learned = isLearned(expRef{check_expt});
         previousBlockFilename = dat.expFilePath(expRef{check_expt}, 'block', 'master');
         if exist(previousBlockFilename,'file')
             previousBlock = load(previousBlockFilename);
