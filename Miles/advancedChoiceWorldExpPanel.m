@@ -261,8 +261,18 @@ classdef advancedChoiceWorldExpPanel < eui.SqueakExpPanel
               set(obj.TrialCountLabel, ...
                 'String', num2str(updates(ui).value));
               
-            case {'events.repeatNum', 'events.totalReward'}
+            case 'events.totalReward'
+              if ~isKey(obj.LabelsMap, signame)
+                obj.LabelsMap(signame) = obj.addInfoField(signame, '');
+              end
+              % data are sent as uint8, so chars over 255 are
+              % misrepresented.  Here we restore the mu symbol.
+              str = strrep(updates(ui).value, char(255), char(956));
+              set(obj.LabelsMap(signame), 'String', str, 'UserData', clock,...
+                'ForegroundColor', obj.RecentColour);
               
+            otherwise
+              % For any custom updates, simply display then
               if ~isKey(obj.LabelsMap, signame)
                 obj.LabelsMap(signame) = obj.addInfoField(signame, '');
               end
