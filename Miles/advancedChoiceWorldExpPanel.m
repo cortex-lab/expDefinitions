@@ -1,4 +1,4 @@
-classdef advancedChoiceWorldExpPanel < eui.SqueakExpPanel
+classdef advancedChoiceWorldExpPanel < eui.SignalsExpPanel
   % UI control for monitoring advancedChoiceWorld
   %   A UI panel that plots experiment updates specific to the
   %   advancedChoiceWorld signals experiment definition.  Plots a
@@ -6,11 +6,12 @@ classdef advancedChoiceWorldExpPanel < eui.SqueakExpPanel
   %   a simulation of the current stimulus window and stimulus position
   %   with respect to the response thresholds.
   %
-  % See also eui.SqueakExpPanel
+  % See also eui.SignalsExpPanel
   %
   % Part of Rigbox
     
   properties (Access = private)
+    RewardUnits = sprintf('%cl', char(956)) % Units of the reward output
     PsychometricAxes % Handle to axes of psychometric plot
     ExperimentAxes % Handle to axes of wheel trace and threhold line plot
     ExperimentHands % handles to plot objects in the experiment axes
@@ -27,14 +28,24 @@ classdef advancedChoiceWorldExpPanel < eui.SqueakExpPanel
   
   methods
     function obj = advancedChoiceWorldExpPanel(parent, ref, params, logEntry)
-      obj = obj@eui.SqueakExpPanel(parent, ref, params, logEntry);
+      obj = obj@eui.SignalsExpPanel(parent, ref, params, logEntry);
       % Initialize InputSensor properties for speed
       obj.InputSensorPos = nan(1000*30, 1);
       obj.InputSensorPosTime = nan(1000*30, 1);
       obj.InputSensorPosCount = 0;
-      obj.Block.numCompletedTrials = -1;
+      obj.Block.numCompletedTrials = -1; % Store sum of events.newTrial
+      obj.Block.totalReward = 0; % Store sum of outputs.reward event here
       obj.Block.trial = struct('contrastLeft', [], 'contrastRight', [], ...
         'response', [], 'repeatNum', [], 'feedback', [], 'pars', []);
+      % Set which events we wish to display as info fields
+      exclude = ["inputs.wheelDeg", "events.expStart", "events.newTrial", "events.contrast"];
+      obj.UpdatesFilter = [obj.UpdatesFilter, exclude];
+      % Prettify the InfoLabels
+      obj.FormatLabels = true;
+      % Add our reward info field.  Unlike TrialCountLabel we keep this in
+      % the LabelsMap so that it updates green when changing
+      obj.LabelsMap('outputs.reward') = obj.addInfoField('Reward', ['0 ' obj.RewardUnits]);
+      set(obj.LabelsMap('outputs.reward'), 'UserData', clock);
     end
     
   end
@@ -233,14 +244,14 @@ classdef advancedChoiceWorldExpPanel < eui.SqueakExpPanel
               fbTime = (24*3600*datenum(updates(ui).timestamp))-(24*3600*obj.StartedDateTime);
               whIdx = find(obj.InputSensorPosTime<fbTime,1, 'last');
               
-              if updates(ui).value>0
+              if updates(ui).value > 0
                 set(obj.ExperimentHands.corrIcon, ...
                   'XData', obj.InputSensorPos(whIdx), ...
                   'YData', obj.InputSensorPosTime(whIdx));
                 set(obj.ExperimentHands.incorrIcon, ...
                   'XData', 0, ...
                   'YData', NaN);
-              elseif updates(ui).value==0
+              else
                 set(obj.ExperimentHands.incorrIcon, ...
                   'XData', obj.InputSensorPos(whIdx), ...
                   'YData', obj.InputSensorPosTime(whIdx));
@@ -261,22 +272,35 @@ classdef advancedChoiceWorldExpPanel < eui.SqueakExpPanel
               set(obj.TrialCountLabel, ...
                 'String', num2str(updates(ui).value));
               
-            case {'events.repeatNum', 'events.totalReward'}
-              
-              if ~isKey(obj.LabelsMap, signame)
-                obj.LabelsMap(signame) = obj.addInfoField(signame, '');
-              end
-              str = toStr(updates(ui).value);
+            case 'outputs.reward'
+              % Keep track of total reward and display both
+              obj.Block.totalReward = obj.Block.totalReward + updates(ui).value;
+              str = sprintf('%.1f%s (%.1f%s)', ...
+                obj.Block.totalReward, obj.RewardUnits, ...
+                updates(ui).value, obj.RewardUnits);
               set(obj.LabelsMap(signame), 'String', str, 'UserData', clock,...
                 'ForegroundColor', obj.RecentColour);
+              
+            otherwise
+              % For any custom updates that pass the UpdatesFilter, simply
+              % display their values
+              onList = any(ismember(signame, obj.UpdatesFilter));
+              if (obj.Exclude && ~onList) || (~obj.Exclude && onList)
+                if ~isKey(obj.LabelsMap, signame) % If new update, add field
+                  obj.LabelsMap(signame) = obj.addInfoField(signame, '');
+                end
+                str = toStr(updates(ui).value); % Convert the value to string
+                set(obj.LabelsMap(signame), 'String', str, 'UserData', clock,...
+                  'ForegroundColor', obj.RecentColour); % Update value
+              end
           end
         end
         
       end
     end
-    
+        
     function build(obj, parent)
-      build@eui.SqueakExpPanel(obj, parent);
+      build@eui.SignalsExpPanel(obj, parent);
       
       % Build the psychometric axes
       plotgrid = uiextras.VBox('Parent', obj.CustomPanel, 'Padding', 5);
@@ -287,6 +311,14 @@ classdef advancedChoiceWorldExpPanel < eui.SqueakExpPanel
       obj.PsychometricAxes.ActivePositionProperty = 'position';
       obj.PsychometricAxes.YLim = [-1 101];
       obj.PsychometricAxes.NextPlot = 'add';
+      obj.PsychometricAxes.Title = 'Pyschometric plot';
+      obj.PsychometricAxes.xLabel('Contrast');
+      yyaxis(obj.PsychometricAxes.Handle,'left')
+      set(obj.PsychometricAxes.Handle, 'YColor', [0 .8 .8])
+      obj.PsychometricAxes.yLabel('% Leftward');
+      yyaxis(obj.PsychometricAxes.Handle,'right')
+      set(obj.PsychometricAxes.Handle, 'YColor', 'm')
+      obj.PsychometricAxes.yLabel('% Rightward');
       
       uiextras.Empty('Parent', plotgrid, 'Visible', 'off');
       
