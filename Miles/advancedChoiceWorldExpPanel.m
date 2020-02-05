@@ -41,7 +41,7 @@ classdef advancedChoiceWorldExpPanel < eui.SignalsExpPanel
       exclude = ["inputs.wheelDeg", "events.expStart", "events.newTrial", "events.contrast"];
       obj.UpdatesFilter = [obj.UpdatesFilter, exclude];
       % Prettify the InfoLabels
-%       obj.FormatLabels = true;
+      obj.FormatLabels = true;
       % Add our reward info field.  Unlike TrialCountLabel we keep this in
       % the LabelsMap so that it updates green when changing
       obj.LabelsMap('outputs.reward') = obj.addInfoField('Reward', ['0 ' obj.RewardUnits]);
