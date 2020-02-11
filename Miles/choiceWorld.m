@@ -185,8 +185,8 @@ events.endTrial = at(~trialData.repeatTrial, stimOff.identity);
 events.disengaged = skipRepeats(keepWhen(cond(...
   tooSlow, 'long RT',...
   true, 'false'), events.trialNum > p.minTrials));
-events.windowedRT = windowedRT.map(fun.partial(@sprintf, '%.1f sec'));
-events.baselineRT = baselineRT.map(fun.partial(@sprintf, '%.1f sec'));
+events.windowedRT = windowedRT;
+events.baselineRT = baselineRT;
 events.pctDecrease = map(((baselinePerf - windowedPerf)/baselinePerf)*100, fun.partial(@sprintf, '%.1f%%'));
 events.endAfter = trialDataInit.endAfter/60;
 
@@ -205,8 +205,6 @@ events.useContrasts = trialData.useContrasts;
 events.trialsToZeroContrast = trialData.trialsToZeroContrast;
 events.hitBuffer = trialData.hitBuffer;
 events.wheelGain = wheelGain;
-volumeUnits = fun.partial(@sprintf, '%2$.1f%1$cl', char(956));
-events.totalWater = outputs.reward.scan(@plus, 0).map(volumeUnits);
 
 %% Defaults
 try 
@@ -581,11 +579,11 @@ for i = length(expRef):-1:1
     continue
   end
   try
-    feedback = readNPY(fullfile(p,'_ibl_trials.feedbackType.npy'));
-    contrastLeft = readNPY(fullfile(p,'_ibl_trials.contrastLeft.npy'));
-    contrastRight = readNPY(fullfile(p,'_ibl_trials.contrastRight.npy'));
-    incl = readNPY(fullfile(p,'_ibl_trials.included.npy'));
-    choice = readNPY(fullfile(p,'_ibl_trials.choice.npy'));
+    feedback = readNPY(fullfile(p,'_misc_trials.feedbackType.npy'));
+    contrastLeft = readNPY(fullfile(p,'_misc_trials.contrastLeft.npy'));
+    contrastRight = readNPY(fullfile(p,'_misc_trials.contrastRight.npy'));
+    incl = readNPY(fullfile(p,'_misc_trials.included.npy'));
+    choice = readNPY(fullfile(p,'_misc_trials.choice.npy'));
   catch
     warning('isLearned:ALFLoad:MissingFiles', ...
       'Unable to load files for session %s', expRef{i})
@@ -620,6 +618,7 @@ for i = length(expRef):-1:1
         [max(contrastSet), 30, 0.4, 0.4]);
       if abs(pars(1)) < 16 && pars(2) < 19 && pars(3) < 0.2 && pars(4) < 0.2
         learned = true;
+        return
       else
         fprintf('Fit parameter values below threshold\n')
         return
