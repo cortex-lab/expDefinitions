@@ -1,7 +1,37 @@
 function imageWorld(t, evts, p, vs, ~, ~, ~)
 %% IMAGEWORLD
-% Image directory must contain image files as MAT files named imgN where N
-% = {1, ..., N total images}.
+% There are many possible ways of presenting images in Signals.  The way in
+% which you write your experiment should depend on what works best for you.
+% Things to consider: 
+%
+% %%% How many images are being presented? %%% 
+%
+% If you're only loading a couple of images you can call `vis.image` with
+% each path.  This is most efficient because the image is loaded during
+% experiment initialization and the texture is loaded into the buffer only
+% once per experiment:
+%
+%  vs.image1 = vis.image('path/to/image1.tif');
+%  vs.image2 = vis.image('path/to/image2.tif');
+%
+% If there are many images you may need to load them online, in which case
+% the signal that maps to the load function should update well before the
+% image is to be shown.  Also loading may cause a delay in the experiment
+% loop (MATLAB is single threaded) so for large images the load should
+% happen when nothing else is happening (i.e. an inter-trial interval or
+% when the stimulus isn't updating).
+%
+% %%% What needs parameterizing? %%%
+%
+% The more flexible your experiment needs to be, the more complex the code.
+% If you will always be working with the same image files, consider renaming
+% them so that they are easier to load, or use 
+
+
+
+
+
+
 %% parameters
 % Image directory
 imgDir = p.imgDir.skipRepeats();
@@ -51,9 +81,8 @@ evts.numStr = numberStr;
 % column is a condition.  All conditional paramters must have the same
 % number of columns.
 try
-p.imgDir = '\\zserver.cortexlab.net\Data\pregenerated_textures\Marius\proc\selection2800';
-p.one = '\\zserver.cortexlab.net\Data\pregenerated_textures\Marius\proc\selection2800\img1.mat';
-p.two = '\\zserver.cortexlab.net\Data\pregenerated_textures\Marius\proc\selection2800\img2.mat';
+p.imgDir = fullfile(matlabroot, 'toolbox', 'matlab', 'demos', 'html');
+p.format = 'png';
 p.onDuration = 5;
 p.offDuration = 2;
 catch ex
